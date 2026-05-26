@@ -1,5 +1,5 @@
-// Replace with your Google Apps Script deployment URL
-const GOOGLE_SCRIPT_URL = 'https://script.googleapis.com/macros/s/YOUR_DEPLOYMENT_URL_HERE/usercopy';
+
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjQK3ojsvqxrMXpg1cFpJa15yFQlOZYcpMlpftZUFwn573w9S-um196CXPfsUrlkxZ/exec';
 
 // Chart configuration
 let chart = null;
