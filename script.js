@@ -68,9 +68,11 @@ function initChart() {
 async function fetchData() {
   try {
     const response = await fetch(GOOGLE_SCRIPT_URL);
+    console.log('[google web app] Request completed.', { ok: response.ok, status: response.status });
     const data = await response.json();
 
     if (data && data.length > 0) {
+      console.log(`[google web app] Successfully fetched ${data.length} record(s).`);
       // Get the latest data
       const latestData = data[data.length - 1];
 
@@ -87,6 +89,9 @@ async function fetchData() {
 
       // Update connection status
       updateStatus(true);
+    } else {
+      console.warn('[google web app] Fetch succeeded but returned no records.');
+      updateStatus(false);
     }
   } catch (error) {
     console.error('Error fetching data:', error);
