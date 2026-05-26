@@ -131,16 +131,19 @@ function updateChart(data) {
 function updateStatus(connected) {
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
+  const connectionStatus = connected ? 'Connected' : 'Disconnected';
 
   if (connected) {
     statusDot.classList.add('connected');
-    statusText.textContent = 'Connected';
+    statusText.textContent = connectionStatus;
     statusText.style.color = '#2ed573';
   } else {
     statusDot.classList.remove('connected');
-    statusText.textContent = 'Disconnected';
+    statusText.textContent = connectionStatus;
     statusText.style.color = '#ff4757';
   }
+
+  console.log(`[fetch status] ${connectionStatus}`);
 }
 
 // Initialize on page load
