@@ -1,5 +1,5 @@
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjQK3ojsvqxrMXpg1cFpJa15yFQlOZYcpMlpftZUFwn573w9S-um196CXPfsUrlkxZ/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjQK3ojsvqxrMXpg1cFpJa15yFQlOZYcpMlpftZUFwn573w9S-um196CXPfsUrlkxZ/usercopy';
 
 // Chart configuration
 let chart = null;
