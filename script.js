@@ -1,5 +1,5 @@
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjQK3ojsvqxrMXpg1cFpJa15yFQlOZYcpMlpftZUFwn573w9S-um196CXPfsUrlkxZ/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxKldbtfwKoROrIaVHF13DBHeHDJF2LnpNdOhObn7cve0CsTYDvrK3zAJQcHbP6S-Bo_g/exec';
 
 // Chart configuration
 let chart = null;
@@ -75,9 +75,9 @@ async function fetchData() {
       const latestData = data[data.length - 1];
 
       // Update display values
-      document.getElementById('voltageValue').textContent = latestData.voltage.toFixed(2);
-      document.getElementById('currentValue').textContent = latestData.current.toFixed(2);
-      document.getElementById('powerValue').textContent = latestData.power.toFixed(2);
+      document.getElementById('voltageValue').textContent = toNumber(latestData.voltage).toFixed(2);
+      document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
+      document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
 
       // Update last update time
       document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
@@ -94,16 +94,28 @@ async function fetchData() {
   }
 }
 
+
+
+function toNumber(value) {
+  const num = parseFloat(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function formatTimestamp(timestamp) {
+  const parsed = new Date(timestamp);
+  return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleTimeString();
+}
+
 // Update chart with new data
 function updateChart(data) {
   // Keep only last maxDataPoints
   const recentData = data.slice(-maxDataPoints);
 
   chartData.labels = recentData.map((item, index) => {
-    return index % 10 === 0 ? new Date(item.timestamp).toLocaleTimeString() : '';
+    return index % 10 === 0 ? formatTimestamp(item.timestamp) : '';
   });
 
-  chartData.datasets[0].data = recentData.map(item => item.voltage);
+  chartData.datasets[0].data = recentData.map(item => toNumber(item.voltage));
 
   // Update max Y axis based on data
   const maxVoltage = Math.max(...recentData.map(item => item.voltage));
