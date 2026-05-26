@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R4 WiFi Voltage Monitor</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>R4 WiFi Voltage Monitor</h1>
+      <div class="status" id="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="data-display">
+        <div class="metric">
+          <h2>Voltage</h2>
+          <p class="value" id="voltageValue">--</p>
+          <p class="unit">V</p>
+        </div>
+        <div class="metric">
+          <h2>Current</h2>
+          <p class="value" id="currentValue">--</p>
+          <p class="unit">mA</p>
+        </div>
+        <div class="metric">
+          <h2>Power</h2>
+          <p class="value" id="powerValue">--</p>
+          <p class="unit">mW</p>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="voltageChart"></canvas>
+      </div>
+
+      <div class="last-update">
+        Last update: <span id="lastUpdate">--</span>
+      </div>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
