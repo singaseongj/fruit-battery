@@ -1,5 +1,5 @@
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxKldbtfwKoROrIaVHF13DBHeHDJF2LnpNdOhObn7cve0CsTYDvrK3zAJQcHbP6S-Bo_g/exec';
+const DATA_FILE_URL = './data.json';
 
 // Chart configuration
 let chart = null;
@@ -67,12 +67,13 @@ function initChart() {
 // Fetch data from Google Apps Script
 async function fetchData() {
   try {
-    const response = await fetch(GOOGLE_SCRIPT_URL);
-    console.log('[google web app] Request completed.', { ok: response.ok, status: response.status });
-    const data = await response.json();
+    const response = await fetch(DATA_FILE_URL, { cache: 'no-store' });
+    console.log('[local json] Request completed.', { ok: response.ok, status: response.status });
+    const payload = await response.json();
+    const data = Array.isArray(payload.records) ? payload.records : [];
 
-    if (data && data.length > 0) {
-      console.log(`[google web app] Successfully fetched ${data.length} record(s).`);
+    if (data.length > 0) {
+      console.log(`[local json] Successfully loaded ${data.length} record(s).`);
       // Get the latest data
       const latestData = data[data.length - 1];
 
@@ -82,7 +83,8 @@ async function fetchData() {
       document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
 
       // Update last update time
-      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+      const lastUpdatedAt = payload.updatedAt ? new Date(payload.updatedAt) : new Date();
+      document.getElementById('lastUpdate').textContent = lastUpdatedAt.toLocaleTimeString();
 
       // Update chart with last N data points
       updateChart(data);
@@ -90,7 +92,7 @@ async function fetchData() {
       // Update connection status
       updateStatus(true);
     } else {
-      console.warn('[google web app] Fetch succeeded but returned no records.');
+      console.warn('[local json] Fetch succeeded but returned no records.');
       updateStatus(false);
     }
   } catch (error) {
@@ -156,6 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initChart();
   fetchData();
   
-  // Fetch new data every second
-  setInterval(fetchData, 1000);
+  // Refresh UI every minute from backend-updated JSON
+  setInterval(fetchData, 60 * 1000);
 });

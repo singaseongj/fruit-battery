@@ -1,0 +1,13 @@
+{
+  "name": "fruit-battery",
+  "version": "1.0.0",
+  "description": "Realtime fruit-battery monitoring system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "update:data": "node scripts/update-data.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
