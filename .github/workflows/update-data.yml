@@ -2,7 +2,7 @@ name: Update battery data
 
 on:
   schedule:
-    - cron: '* * * * *'
+    - cron: '*/1 * * * *'
   workflow_dispatch:
 
 permissions:
