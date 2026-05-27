@@ -1,5 +1,6 @@
 
 const DATA_FILE_URL = './data.json';
+const DATA_CACHE_KEY = 'voltage-monitor-cache';
 
 // Chart configuration
 let chart = null;
@@ -67,7 +68,8 @@ function initChart() {
 // Fetch data from Google Apps Script
 async function fetchData() {
   try {
-    const response = await fetch(DATA_FILE_URL, { cache: 'no-store' });
+    const cacheBustedUrl = `${DATA_FILE_URL}?t=${Date.now()}`;
+    const response = await fetch(cacheBustedUrl, { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
     console.log('[local json] Request completed.', { ok: response.ok, status: response.status });
     const payload = await response.json();
     const data = Array.isArray(payload.records) ? payload.records : [];
@@ -153,11 +155,33 @@ function updateStatus(connected) {
   console.log(`[fetch status] ${connectionStatus}`);
 }
 
+function clearInMemoryState() {
+  chartData.labels = [];
+  chartData.datasets[0].data = [];
+  if (chart) {
+    chart.update('none');
+  }
+}
+
+function clearBrowserCacheHint() {
+  try {
+    sessionStorage.removeItem(DATA_CACHE_KEY);
+  } catch (error) {
+    console.warn('Unable to clear browser memory hint:', error);
+  }
+}
+
+window.addEventListener('beforeunload', () => {
+  clearInMemoryState();
+  clearBrowserCacheHint();
+});
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+  clearBrowserCacheHint();
   initChart();
   fetchData();
-  
+
   // Refresh UI every minute from backend-updated JSON
   setInterval(fetchData, 60 * 1000);
 });
