@@ -1,5 +1,4 @@
 const DATA_FILE_URL = './data.json';
-const REALTIME_PROXY_URLS = ['./api/realtime', '/api/realtime'];
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
 const TWO_HOURS_IN_MS = 2 * 60 * 60 * 1000;
 const FIVE_MINUTES_IN_MS = 5 * 60 * 1000;
@@ -17,19 +16,15 @@ let chartData = {
     tension: 0.25,
     fill: true,
     pointRadius: [],
-    pointHoverRadius: 5,
     pointBackgroundColor: '#667eea',
     pointBorderColor: '#fff',
     pointBorderWidth: 2,
+    pointHoverRadius: 7,
+    pointStyle: 'circle',
+    showLine: true,
+    spanGaps: false,
   }]
 };
-
-function shouldUseRealtimeApi() {
-  const { protocol, hostname } = window.location;
-  if (protocol === 'file:') return false;
-  if (hostname.endsWith('github.io')) return false;
-  return true;
-}
 
 function initChart() {
   const ctx = document.getElementById('voltageChart').getContext('2d');
@@ -48,29 +43,6 @@ function initChart() {
   });
 }
 
-async function fetchRealtimeData() {
-  let lastError = null;
-
-  for (const url of REALTIME_PROXY_URLS) {
-    try {
-      const response = await fetch(`${url}?t=${Date.now()}`, {
-        cache: 'reload',
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const payload = await response.json();
-      return Array.isArray(payload.records) ? payload.records : [];
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError || new Error('Unable to load realtime data');
-}
-
 async function fetchCachedData() {
   const response = await fetch(`${DATA_FILE_URL}?t=${Date.now()}`, {
     cache: 'reload',
@@ -85,29 +57,12 @@ async function fetchCachedData() {
 }
 
 async function fetchData() {
-  if (!shouldUseRealtimeApi()) {
-    try {
-      const fallbackRecords = await fetchCachedData();
-      updateUi(fallbackRecords);
-    } catch (fallbackError) {
-      console.error('Error fetching data:', fallbackError);
-      updateUi([]);
-    }
-    return;
-  }
-
   try {
-    const records = await fetchRealtimeData();
+    const records = await fetchCachedData();
     updateUi(records);
   } catch (error) {
-    console.warn('[realtime] failed, falling back to data.json:', error.message);
-    try {
-      const fallbackRecords = await fetchCachedData();
-      updateUi(fallbackRecords);
-    } catch (fallbackError) {
-      console.error('Error fetching data:', fallbackError);
-      updateUi([]);
-    }
+    console.error('Error fetching data:', error);
+    updateUi([]);
   }
 }
 
@@ -170,7 +125,7 @@ function buildTwoHourTimeline(data) {
     const sample = pointsBySlot.get(slotMs);
     timeline.push({
       slotMs,
-      voltage: sample ? sample.voltage : 0,
+      voltage: sample ? sample.voltage : null,
       hasData: Boolean(sample)
     });
   }
@@ -187,10 +142,11 @@ function updateChart(data) {
       : ''
   ));
   chartData.datasets[0].data = timeline.map((point) => point.voltage);
-  chartData.datasets[0].pointRadius = timeline.map((point) => (point.hasData ? 4 : 2));
+  chartData.datasets[0].pointRadius = timeline.map((point) => (point.hasData ? 5 : 0));
 
   const voltages = chartData.datasets[0].data;
-  const maxVoltage = voltages.length ? Math.max(...voltages) : 0;
+  const numericVoltages = voltages.filter((value) => Number.isFinite(value));
+  const maxVoltage = numericVoltages.length ? Math.max(...numericVoltages) : 0;
   chart.options.scales.y.min = 0;
   chart.options.scales.y.max = Math.max(5, Math.ceil(maxVoltage + 1));
   chart.update('none');
