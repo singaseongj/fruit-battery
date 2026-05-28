@@ -1,10 +1,11 @@
-
 const DATA_FILE_URL = './data.json';
+const REALTIME_PROXY_URL = './api/realtime';
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
 
 // Chart configuration
 let chart = null;
-const maxDataPoints = 60; // Show last 60 seconds of data
+const maxDataPoints = 60;
+const dotIntervalMinutes = 5;
 let chartData = {
   labels: [],
   datasets: [{
@@ -14,14 +15,14 @@ let chartData = {
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
     tension: 0.4,
     fill: true,
-    pointRadius: 4,
+    pointRadius: 0,
+    pointHoverRadius: 4,
     pointBackgroundColor: '#667eea',
     pointBorderColor: '#fff',
     pointBorderWidth: 2,
   }]
 };
 
-// Initialize chart
 function initChart() {
   const ctx = document.getElementById('voltageChart').getContext('2d');
   chart = new Chart(ctx, {
@@ -30,80 +31,77 @@ function initChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          labels: {
-            color: '#666',
-            font: { size: 14 }
-          }
-        }
-      },
+      plugins: { legend: { display: true, labels: { color: '#666', font: { size: 14 } } } },
       scales: {
-        y: {
-          beginAtZero: false,
-          min: 0,
-          max: 20,
-          ticks: {
-            color: '#999',
-          },
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
-          }
-        },
-        x: {
-          ticks: {
-            color: '#999',
-            maxTicksLimit: 6
-          },
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
-          }
-        }
+        y: { beginAtZero: false, min: 0, max: 20, ticks: { color: '#999' }, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
+        x: { ticks: { color: '#999', maxTicksLimit: 6 }, grid: { color: 'rgba(0, 0, 0, 0.05)' } }
       }
     }
   });
 }
 
-// Fetch data from Google Apps Script
+async function fetchRealtimeData() {
+  const response = await fetch(`${REALTIME_PROXY_URL}?t=${Date.now()}`, {
+    cache: 'reload',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload.records) ? payload.records : [];
+}
+
+async function fetchCachedData() {
+  const response = await fetch(`${DATA_FILE_URL}?t=${Date.now()}`, {
+    cache: 'reload',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return {
+    records: Array.isArray(payload.records) ? payload.records : [],
+    updatedAt: payload.updatedAt
+  };
+}
+
 async function fetchData() {
   try {
-    const cacheBustedUrl = `${DATA_FILE_URL}?t=${Date.now()}`;
-    const response = await fetch(cacheBustedUrl, { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
-    console.log('[local json] Request completed.', { ok: response.ok, status: response.status });
-    const payload = await response.json();
-    const data = Array.isArray(payload.records) ? payload.records : [];
-
-    if (data.length > 0) {
-      console.log(`[local json] Successfully loaded ${data.length} record(s).`);
-      // Get the latest data
-      const latestData = data[data.length - 1];
-
-      // Update display values
-      document.getElementById('voltageValue').textContent = toNumber(latestData.voltage).toFixed(2);
-      document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
-      document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
-
-      // Update last update time
-      const lastUpdatedAt = payload.updatedAt ? new Date(payload.updatedAt) : new Date();
-      document.getElementById('lastUpdate').textContent = lastUpdatedAt.toLocaleTimeString();
-
-      // Update chart with last N data points
-      updateChart(data);
-
-      // Update connection status
-      updateStatus(true);
-    } else {
-      console.warn('[local json] Fetch succeeded but returned no records.');
+    const records = await fetchRealtimeData();
+    updateUi(records, new Date().toISOString());
+  } catch (error) {
+    console.warn('[realtime] failed, falling back to data.json:', error.message);
+    try {
+      const fallback = await fetchCachedData();
+      updateUi(fallback.records, fallback.updatedAt || new Date().toISOString());
+    } catch (fallbackError) {
+      console.error('Error fetching data:', fallbackError);
       updateStatus(false);
     }
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    updateStatus(false);
   }
 }
 
+function updateUi(data, updatedAt) {
+  if (!data.length) {
+    updateStatus(false);
+    return;
+  }
 
+  const latestData = data[data.length - 1];
+  document.getElementById('voltageValue').textContent = toNumber(latestData.voltage).toFixed(2);
+  document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
+  document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
+
+  const lastUpdatedAt = updatedAt ? new Date(updatedAt) : new Date();
+  document.getElementById('lastUpdate').textContent = lastUpdatedAt.toLocaleTimeString();
+
+  updateChart(data);
+  updateStatus(true);
+}
 
 function toNumber(value) {
   const num = parseFloat(value);
@@ -115,28 +113,27 @@ function formatTimestamp(timestamp) {
   return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleTimeString();
 }
 
-// Update chart with new data
-function updateChart(data) {
-  // Keep only last maxDataPoints
-  const recentData = data.slice(-maxDataPoints);
-
-  chartData.labels = recentData.map((item, index) => {
-    return index % 10 === 0 ? formatTimestamp(item.timestamp) : '';
-  });
-
-  chartData.datasets[0].data = recentData.map(item => toNumber(item.voltage));
-
-  // Update max Y axis based on data
-  const maxVoltage = Math.max(...recentData.map(item => item.voltage));
-  const minVoltage = Math.min(...recentData.map(item => item.voltage));
-  
-  chart.options.scales.y.min = Math.max(0, minVoltage - 1);
-  chart.options.scales.y.max = Math.ceil(maxVoltage + 1);
-
-  chart.update('none'); // Update without animation for smooth real-time updates
+function isFiveMinutePoint(timestamp) {
+  const parsed = new Date(timestamp);
+  return !Number.isNaN(parsed.getTime()) && parsed.getMinutes() % dotIntervalMinutes === 0;
 }
 
-// Update connection status
+function updateChart(data) {
+  const recentData = data.slice(-maxDataPoints);
+
+  chartData.labels = recentData.map((item, index) => (index % 10 === 0 ? formatTimestamp(item.timestamp) : ''));
+  chartData.datasets[0].data = recentData.map((item) => toNumber(item.voltage));
+  chartData.datasets[0].pointRadius = recentData.map((item) => (isFiveMinutePoint(item.timestamp) ? 4 : 0));
+
+  const voltages = recentData.map((item) => toNumber(item.voltage));
+  const maxVoltage = Math.max(...voltages);
+  const minVoltage = Math.min(...voltages);
+
+  chart.options.scales.y.min = Math.max(0, minVoltage - 1);
+  chart.options.scales.y.max = Math.ceil(maxVoltage + 1);
+  chart.update('none');
+}
+
 function updateStatus(connected) {
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
@@ -151,24 +148,16 @@ function updateStatus(connected) {
     statusText.textContent = connectionStatus;
     statusText.style.color = '#ff4757';
   }
-
-  console.log(`[fetch status] ${connectionStatus}`);
 }
 
 function clearInMemoryState() {
   chartData.labels = [];
   chartData.datasets[0].data = [];
-  if (chart) {
-    chart.update('none');
-  }
+  if (chart) chart.update('none');
 }
 
 function clearBrowserCacheHint() {
-  try {
-    sessionStorage.removeItem(DATA_CACHE_KEY);
-  } catch (error) {
-    console.warn('Unable to clear browser memory hint:', error);
-  }
+  try { sessionStorage.removeItem(DATA_CACHE_KEY); } catch (_error) {}
 }
 
 window.addEventListener('beforeunload', () => {
@@ -176,12 +165,15 @@ window.addEventListener('beforeunload', () => {
   clearBrowserCacheHint();
 });
 
-// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
   clearBrowserCacheHint();
   initChart();
   fetchData();
 
-  // Refresh UI every minute from backend-updated JSON
+  const refreshButton = document.getElementById('refreshButton');
+  refreshButton.addEventListener('click', () => {
+    fetchData();
+  });
+
   setInterval(fetchData, 60 * 1000);
 });
