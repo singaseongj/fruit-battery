@@ -1,11 +1,15 @@
 const fs = require('fs/promises');
 const path = require('path');
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxKldbtfwKoROrIaVHF13DBHeHDJF2LnpNdOhObn7cve0CsTYDvrK3zAJQcHbP6S-Bo_g/exec';
+const WEB_APP_URL = process.env.WEB_APP_URL;
 const DATA_FILE = path.join(__dirname, '..', 'data.json');
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 1_000;
+
+if (!WEB_APP_URL) {
+  throw new Error('Missing WEB_APP_URL environment variable');
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,36 +30,24 @@ async function fetchWithRetry(url) {
       const response = await fetch(url, {
         signal: controller.signal,
         headers: {
-          'accept': 'application/json',
+          accept: 'application/json',
           'cache-control': 'no-cache'
         }
       });
 
-      if (response.ok) {
-        return response;
-      }
+      if (response.ok) return response;
 
       const error = new Error(`HTTP ${response.status}`);
-      const retryable = isRetryableStatus(response.status);
-      if (!retryable || attempt === MAX_RETRIES) {
-        throw error;
-      }
+      if (!isRetryableStatus(response.status) || attempt === MAX_RETRIES) throw error;
 
       lastError = error;
       const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
-      console.warn(`Request failed (${error.message}). Retrying in ${delayMs}ms... [${attempt}/${MAX_RETRIES}]`);
       await sleep(delayMs);
     } catch (error) {
-      const isAbort = error?.name === 'AbortError';
-      const handledError = isAbort ? new Error(`Timeout after ${REQUEST_TIMEOUT_MS}ms`) : error;
-
-      if (attempt === MAX_RETRIES) {
-        throw handledError;
-      }
-
+      const handledError = error?.name === 'AbortError' ? new Error(`Timeout after ${REQUEST_TIMEOUT_MS}ms`) : error;
+      if (attempt === MAX_RETRIES) throw handledError;
       lastError = handledError;
       const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
-      console.warn(`Request error (${handledError.message}). Retrying in ${delayMs}ms... [${attempt}/${MAX_RETRIES}]`);
       await sleep(delayMs);
     } finally {
       clearTimeout(timeout);
@@ -66,8 +58,7 @@ async function fetchWithRetry(url) {
 }
 
 async function main() {
-  const response = await fetchWithRetry(GOOGLE_SCRIPT_URL);
-
+  const response = await fetchWithRetry(WEB_APP_URL);
   const payload = await response.json();
   const wrapped = {
     updatedAt: new Date().toISOString(),

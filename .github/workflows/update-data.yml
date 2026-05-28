@@ -24,6 +24,8 @@ jobs:
         run: npm ci
 
       - name: Update data.json
+        env:
+          WEB_APP_URL: ${{ secrets.WEB_APP_URL }}
         run: node scripts/update-data.js
 
       - name: Commit and push if changed
