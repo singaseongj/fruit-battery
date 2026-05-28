@@ -2,12 +2,11 @@ const DATA_FILE_URL = './data.json';
 const REALTIME_PROXY_URLS = ['./api/realtime', '/api/realtime'];
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
 const TWO_HOURS_IN_MS = 2 * 60 * 60 * 1000;
-const pageLoadedAt = new Date();
+const FIVE_MINUTES_IN_MS = 5 * 60 * 1000;
+const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
 
 // Chart configuration
 let chart = null;
-const maxDataPoints = 60;
-const dotIntervalMinutes = 5;
 let chartData = {
   labels: [],
   datasets: [{
@@ -15,10 +14,10 @@ let chartData = {
     data: [],
     borderColor: '#667eea',
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    tension: 0.4,
+    tension: 0.25,
     fill: true,
-    pointRadius: 0,
-    pointHoverRadius: 4,
+    pointRadius: [],
+    pointHoverRadius: 5,
     pointBackgroundColor: '#667eea',
     pointBorderColor: '#fff',
     pointBorderWidth: 2,
@@ -35,8 +34,8 @@ function initChart() {
       maintainAspectRatio: false,
       plugins: { legend: { display: true, labels: { color: '#666', font: { size: 14 } } } },
       scales: {
-        y: { beginAtZero: false, min: 0, max: 20, ticks: { color: '#999' }, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
-        x: { ticks: { color: '#999', maxTicksLimit: 6 }, grid: { color: 'rgba(0, 0, 0, 0.05)' } }
+        y: { beginAtZero: true, min: 0, max: 20, ticks: { color: '#999' }, grid: { color: 'rgba(0, 0, 0, 0.05)' } },
+        x: { ticks: { color: '#999', maxTicksLimit: 8 }, grid: { color: 'rgba(0, 0, 0, 0.05)' } }
       }
     }
   });
@@ -75,10 +74,7 @@ async function fetchCachedData() {
   }
 
   const payload = await response.json();
-  return {
-    records: Array.isArray(payload.records) ? payload.records : [],
-    updatedAt: payload.updatedAt
-  };
+  return Array.isArray(payload.records) ? payload.records : [];
 }
 
 async function fetchData() {
@@ -88,30 +84,45 @@ async function fetchData() {
   } catch (error) {
     console.warn('[realtime] failed, falling back to data.json:', error.message);
     try {
-      const fallback = await fetchCachedData();
-      updateUi(fallback.records);
+      const fallbackRecords = await fetchCachedData();
+      updateUi(fallbackRecords);
     } catch (fallbackError) {
       console.error('Error fetching data:', fallbackError);
-      updateStatus(false);
+      updateUi([]);
     }
   }
 }
 
 function updateUi(data) {
-  if (!data.length) {
-    updateStatus(false);
-    return;
+  const latestData = getLatestDataPoint(data);
+  const isConnected = Boolean(latestData) && (Date.now() - latestData.timeMs <= TEN_MINUTES_IN_MS);
+
+  if (latestData) {
+    document.getElementById('voltageValue').textContent = toNumber(latestData.raw.voltage).toFixed(2);
+    document.getElementById('currentValue').textContent = toNumber(latestData.raw.current).toFixed(2);
+    document.getElementById('powerValue').textContent = toNumber(latestData.raw.power).toFixed(2);
+    document.getElementById('lastUpdate').textContent = new Date(latestData.timeMs).toLocaleTimeString();
+  } else {
+    document.getElementById('voltageValue').textContent = '0.00';
+    document.getElementById('currentValue').textContent = '0.00';
+    document.getElementById('powerValue').textContent = '0.00';
+    document.getElementById('lastUpdate').textContent = '--';
   }
 
-  const latestData = data[data.length - 1];
-  document.getElementById('voltageValue').textContent = toNumber(latestData.voltage).toFixed(2);
-  document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
-  document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
-
-  document.getElementById('lastUpdate').textContent = pageLoadedAt.toLocaleTimeString();
-
   updateChart(data);
-  updateStatus(true);
+  updateStatus(isConnected);
+}
+
+function getLatestDataPoint(data) {
+  let latest = null;
+  for (const item of data) {
+    const timeMs = new Date(item.timestamp).getTime();
+    if (!Number.isFinite(timeMs)) continue;
+    if (!latest || timeMs > latest.timeMs) {
+      latest = { raw: item, timeMs };
+    }
+  }
+  return latest;
 }
 
 function toNumber(value) {
@@ -119,35 +130,51 @@ function toNumber(value) {
   return Number.isFinite(num) ? num : 0;
 }
 
-function formatTimestamp(timestamp) {
-  const parsed = new Date(timestamp);
-  return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleTimeString();
-}
+function buildTwoHourTimeline(data) {
+  const now = Date.now();
+  const end = Math.floor(now / FIVE_MINUTES_IN_MS) * FIVE_MINUTES_IN_MS;
+  const start = end - TWO_HOURS_IN_MS;
 
-function isFiveMinutePoint(timestamp) {
-  const parsed = new Date(timestamp);
-  return !Number.isNaN(parsed.getTime()) && parsed.getMinutes() % dotIntervalMinutes === 0;
+  const pointsBySlot = new Map();
+  for (const item of data) {
+    const ts = new Date(item.timestamp).getTime();
+    if (!Number.isFinite(ts) || ts < start || ts > end + FIVE_MINUTES_IN_MS) continue;
+
+    const slot = Math.floor(ts / FIVE_MINUTES_IN_MS) * FIVE_MINUTES_IN_MS;
+    const existing = pointsBySlot.get(slot);
+    if (!existing || ts > existing.timeMs) {
+      pointsBySlot.set(slot, { timeMs: ts, voltage: toNumber(item.voltage) });
+    }
+  }
+
+  const timeline = [];
+  for (let slotMs = start; slotMs <= end; slotMs += FIVE_MINUTES_IN_MS) {
+    const sample = pointsBySlot.get(slotMs);
+    timeline.push({
+      slotMs,
+      voltage: sample ? sample.voltage : 0,
+      hasData: Boolean(sample)
+    });
+  }
+
+  return timeline;
 }
 
 function updateChart(data) {
-  const now = Date.now();
-  const twoHoursAgo = now - TWO_HOURS_IN_MS;
-  const twoHourWindow = data.filter((item) => {
-    const time = new Date(item.timestamp).getTime();
-    return Number.isFinite(time) && time >= twoHoursAgo && time <= now;
-  });
-  const recentData = twoHourWindow.slice(-maxDataPoints);
+  const timeline = buildTwoHourTimeline(data);
 
-  chartData.labels = recentData.map((item, index) => (index % 10 === 0 ? formatTimestamp(item.timestamp) : ''));
-  chartData.datasets[0].data = recentData.map((item) => toNumber(item.voltage));
-  chartData.datasets[0].pointRadius = recentData.map((item) => (isFiveMinutePoint(item.timestamp) ? 4 : 0));
+  chartData.labels = timeline.map((point, index) => (
+    index % 2 === 0
+      ? new Date(point.slotMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : ''
+  ));
+  chartData.datasets[0].data = timeline.map((point) => point.voltage);
+  chartData.datasets[0].pointRadius = timeline.map((point) => (point.hasData ? 4 : 2));
 
-  const voltages = recentData.map((item) => toNumber(item.voltage));
-  const maxVoltage = Math.max(...voltages);
-  const minVoltage = Math.min(...voltages);
-
-  chart.options.scales.y.min = Math.max(0, minVoltage - 1);
-  chart.options.scales.y.max = Math.ceil(maxVoltage + 1);
+  const voltages = chartData.datasets[0].data;
+  const maxVoltage = voltages.length ? Math.max(...voltages) : 0;
+  chart.options.scales.y.min = 0;
+  chart.options.scales.y.max = Math.max(5, Math.ceil(maxVoltage + 1));
   chart.update('none');
 }
 
@@ -170,6 +197,7 @@ function updateStatus(connected) {
 function clearInMemoryState() {
   chartData.labels = [];
   chartData.datasets[0].data = [];
+  chartData.datasets[0].pointRadius = [];
   if (chart) chart.update('none');
 }
 
