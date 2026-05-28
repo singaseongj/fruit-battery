@@ -1,6 +1,8 @@
 const DATA_FILE_URL = './data.json';
-const REALTIME_PROXY_URL = './api/realtime';
+const REALTIME_PROXY_URLS = ['./api/realtime', '/api/realtime'];
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
+const TWO_HOURS_IN_MS = 2 * 60 * 60 * 1000;
+const pageLoadedAt = new Date();
 
 // Chart configuration
 let chart = null;
@@ -41,16 +43,26 @@ function initChart() {
 }
 
 async function fetchRealtimeData() {
-  const response = await fetch(`${REALTIME_PROXY_URL}?t=${Date.now()}`, {
-    cache: 'reload',
-    headers: { 'Cache-Control': 'no-cache' }
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+  let lastError = null;
+
+  for (const url of REALTIME_PROXY_URLS) {
+    try {
+      const response = await fetch(`${url}?t=${Date.now()}`, {
+        cache: 'reload',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      return Array.isArray(payload.records) ? payload.records : [];
+    } catch (error) {
+      lastError = error;
+    }
   }
 
-  const payload = await response.json();
-  return Array.isArray(payload.records) ? payload.records : [];
+  throw lastError || new Error('Unable to load realtime data');
 }
 
 async function fetchCachedData() {
@@ -72,12 +84,12 @@ async function fetchCachedData() {
 async function fetchData() {
   try {
     const records = await fetchRealtimeData();
-    updateUi(records, new Date().toISOString());
+    updateUi(records);
   } catch (error) {
     console.warn('[realtime] failed, falling back to data.json:', error.message);
     try {
       const fallback = await fetchCachedData();
-      updateUi(fallback.records, fallback.updatedAt || new Date().toISOString());
+      updateUi(fallback.records);
     } catch (fallbackError) {
       console.error('Error fetching data:', fallbackError);
       updateStatus(false);
@@ -85,7 +97,7 @@ async function fetchData() {
   }
 }
 
-function updateUi(data, updatedAt) {
+function updateUi(data) {
   if (!data.length) {
     updateStatus(false);
     return;
@@ -96,8 +108,7 @@ function updateUi(data, updatedAt) {
   document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
   document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
 
-  const lastUpdatedAt = updatedAt ? new Date(updatedAt) : new Date();
-  document.getElementById('lastUpdate').textContent = lastUpdatedAt.toLocaleTimeString();
+  document.getElementById('lastUpdate').textContent = pageLoadedAt.toLocaleTimeString();
 
   updateChart(data);
   updateStatus(true);
@@ -119,7 +130,13 @@ function isFiveMinutePoint(timestamp) {
 }
 
 function updateChart(data) {
-  const recentData = data.slice(-maxDataPoints);
+  const now = Date.now();
+  const twoHoursAgo = now - TWO_HOURS_IN_MS;
+  const twoHourWindow = data.filter((item) => {
+    const time = new Date(item.timestamp).getTime();
+    return Number.isFinite(time) && time >= twoHoursAgo && time <= now;
+  });
+  const recentData = twoHourWindow.slice(-maxDataPoints);
 
   chartData.labels = recentData.map((item, index) => (index % 10 === 0 ? formatTimestamp(item.timestamp) : ''));
   chartData.datasets[0].data = recentData.map((item) => toNumber(item.voltage));
