@@ -24,6 +24,13 @@ let chartData = {
   }]
 };
 
+function shouldUseRealtimeApi() {
+  const { protocol, hostname } = window.location;
+  if (protocol === 'file:') return false;
+  if (hostname.endsWith('github.io')) return false;
+  return true;
+}
+
 function initChart() {
   const ctx = document.getElementById('voltageChart').getContext('2d');
   chart = new Chart(ctx, {
@@ -78,6 +85,17 @@ async function fetchCachedData() {
 }
 
 async function fetchData() {
+  if (!shouldUseRealtimeApi()) {
+    try {
+      const fallbackRecords = await fetchCachedData();
+      updateUi(fallbackRecords);
+    } catch (fallbackError) {
+      console.error('Error fetching data:', fallbackError);
+      updateUi([]);
+    }
+    return;
+  }
+
   try {
     const records = await fetchRealtimeData();
     updateUi(records);
