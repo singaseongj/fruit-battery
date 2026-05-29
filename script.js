@@ -1,5 +1,7 @@
 const DATA_FILE_URL = './data.json';
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
+const SEOUL_UTC_OFFSET_HOURS = 9;
+const DATA_FRESHNESS_THRESHOLD_MS = 5 * 60 * 60 * 1000;
 
 // Chart configuration
 let chart = null;
@@ -101,15 +103,14 @@ async function fetchData() {
       document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
       document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
 
-      // Update last update time
-      const lastUpdatedAt = payload.updatedAt ? new Date(payload.updatedAt) : new Date();
-      document.getElementById('lastUpdate').textContent = lastUpdatedAt.toLocaleTimeString();
+      // Update last update time from the latest logged data record.
+      document.getElementById('lastUpdate').textContent = formatLoggedDate(latestData.timestamp);
 
       // Update chart with last N data points
       updateChart(data);
 
-      // Update connection status
-      updateStatus(true);
+      // Update connection status based on whether the latest logged data is fresh.
+      updateStatus(isLatestDataFresh(latestData));
     } else {
       console.warn('[local json] Fetch succeeded but returned no records.');
       updateStatus(false);
@@ -125,14 +126,61 @@ function toNumber(value) {
   return Number.isFinite(num) ? num : 0;
 }
 
+function parseSeoulTimestamp(timestamp) {
+  if (!timestamp) return null;
+
+  if (timestamp instanceof Date) {
+    return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+  }
+
+  const timestampText = String(timestamp).trim();
+  const koreanDateMatch = timestampText.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{2}):(\d{2})$/);
+
+  if (koreanDateMatch) {
+    const [, year, month, day, meridiem, hourText, minuteText, secondText] = koreanDateMatch;
+    let hour = Number(hourText);
+
+    if (meridiem === '오전' && hour === 12) hour = 0;
+    if (meridiem === '오후' && hour < 12) hour += 12;
+
+    const utcTime = Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      hour - SEOUL_UTC_OFFSET_HOURS,
+      Number(minuteText),
+      Number(secondText)
+    );
+
+    return new Date(utcTime);
+  }
+
+  const parsed = new Date(timestampText);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isLatestDataFresh(latestData) {
+  const loggedAt = parseSeoulTimestamp(latestData?.timestamp);
+
+  if (!loggedAt) {
+    console.warn('[local json] Latest record has an invalid timestamp.', latestData);
+    return false;
+  }
+
+  const ageMs = Date.now() - loggedAt.getTime();
+  const connected = ageMs >= 0 && ageMs <= DATA_FRESHNESS_THRESHOLD_MS;
+  console.log(`[freshness] Latest Seoul record age: ${(ageMs / (60 * 60 * 1000)).toFixed(2)} hour(s).`);
+  return connected;
+}
+
 function formatLoggedDate(timestamp) {
-  const parsed = new Date(timestamp);
-  return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleString();
+  const parsed = parseSeoulTimestamp(timestamp);
+  return parsed ? parsed.toLocaleString() : String(timestamp || '');
 }
 
 function formatTimestamp(timestamp) {
-  const parsed = new Date(timestamp);
-  return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleTimeString();
+  const parsed = parseSeoulTimestamp(timestamp);
+  return parsed ? parsed.toLocaleTimeString() : String(timestamp || '');
 }
 
 function selectChartDataPoints(data) {
