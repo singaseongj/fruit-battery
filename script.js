@@ -3,7 +3,9 @@ const DATA_CACHE_KEY = 'voltage-monitor-cache';
 
 // Chart configuration
 let chart = null;
-const maxDataPoints = 10; // Show the 10 most recent logged records
+const maxDataPoints = 10; // Show 10 logged records in the chart
+const chartPointIntervalMinutes = 5;
+const recordsPerChartPoint = chartPointIntervalMinutes;
 let chartData = {
   labels: [],
   datasets: [{
@@ -133,10 +135,20 @@ function formatTimestamp(timestamp) {
   return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleTimeString();
 }
 
+function selectChartDataPoints(data) {
+  const selectedData = [];
+
+  for (let index = data.length - 1; index >= 0 && selectedData.length < maxDataPoints; index -= recordsPerChartPoint) {
+    selectedData.unshift(data[index]);
+  }
+
+  return selectedData;
+}
+
 // Update chart with new data
 function updateChart(data) {
-  // Keep only last maxDataPoints
-  const recentData = data.slice(-maxDataPoints);
+  // Keep maxDataPoints chart dots, spaced 5 minutes apart from the latest logged record.
+  const recentData = selectChartDataPoints(data);
 
   chartData.labels = recentData.map(item => formatTimestamp(item.timestamp));
 
