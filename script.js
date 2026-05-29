@@ -3,7 +3,7 @@ const DATA_CACHE_KEY = 'voltage-monitor-cache';
 
 // Chart configuration
 let chart = null;
-const maxDataPoints = 60; // Show last 60 seconds of data
+const maxDataPoints = 10; // Show the 10 most recent logged records
 let chartData = {
   labels: [],
   datasets: [{
@@ -36,6 +36,22 @@ function initChart() {
             color: '#666',
             font: { size: 14 }
           }
+        },
+        tooltip: {
+          callbacks: {
+            title: (tooltipItems) => {
+              const loggedAt = tooltipItems[0]?.raw?.loggedAt;
+              return `Logged: ${formatLoggedDate(loggedAt)}`;
+            },
+            label: (context) => {
+              const record = context.raw || {};
+              return [
+                `Voltage: ${toNumber(record.voltage).toFixed(2)} V`,
+                `Current: ${toNumber(record.current).toFixed(2)} mA`,
+                `Logged date: ${formatLoggedDate(record.loggedAt)}`,
+              ];
+            }
+          }
         }
       },
       scales: {
@@ -53,7 +69,7 @@ function initChart() {
         x: {
           ticks: {
             color: '#999',
-            maxTicksLimit: 6
+            maxTicksLimit: maxDataPoints
           },
           grid: {
             color: 'rgba(0, 0, 0, 0.05)'
@@ -107,6 +123,11 @@ function toNumber(value) {
   return Number.isFinite(num) ? num : 0;
 }
 
+function formatLoggedDate(timestamp) {
+  const parsed = new Date(timestamp);
+  return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleString();
+}
+
 function formatTimestamp(timestamp) {
   const parsed = new Date(timestamp);
   return Number.isNaN(parsed.getTime()) ? String(timestamp || '') : parsed.toLocaleTimeString();
@@ -117,15 +138,21 @@ function updateChart(data) {
   // Keep only last maxDataPoints
   const recentData = data.slice(-maxDataPoints);
 
-  chartData.labels = recentData.map((item, index) => {
-    return index % 10 === 0 ? formatTimestamp(item.timestamp) : '';
-  });
+  chartData.labels = recentData.map(item => formatTimestamp(item.timestamp));
 
-  chartData.datasets[0].data = recentData.map(item => toNumber(item.voltage));
+  chartData.datasets[0].data = recentData.map(item => ({
+    x: formatTimestamp(item.timestamp),
+    y: toNumber(item.voltage),
+    voltage: item.voltage,
+    current: item.current,
+    loggedAt: item.timestamp,
+  }));
+
+  const voltageValues = recentData.map(item => toNumber(item.voltage));
 
   // Update max Y axis based on data
-  const maxVoltage = Math.max(...recentData.map(item => item.voltage));
-  const minVoltage = Math.min(...recentData.map(item => item.voltage));
+  const maxVoltage = Math.max(...voltageValues);
+  const minVoltage = Math.min(...voltageValues);
 
   chart.options.scales.y.min = Math.max(0, minVoltage - 1);
   chart.options.scales.y.max = Math.ceil(maxVoltage + 1);
