@@ -52,7 +52,6 @@ function initChart() {
               return [
                 `Voltage: ${toNumber(record.voltage).toFixed(2)} V`,
                 `Current: ${toNumber(record.current).toFixed(2)} mA`,
-                `Logged date: ${formatLoggedDate(record.loggedAt)}`,
               ];
             }
           }
