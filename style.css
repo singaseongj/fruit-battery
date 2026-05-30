@@ -54,8 +54,18 @@ main { padding: 40px; }
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
 }
 #refreshButton:hover { background: #5768d9; }
+.header-link { color: #fff; font-weight: 600; text-decoration: none; }
+.header-link:hover { text-decoration: underline; }
+.raw-data-summary { color: #666; font-size: 14px; margin-bottom: 16px; text-align: center; }
+.table-container { overflow-x: auto; background: #f5f7fa; border-radius: 15px; padding: 10px; }
+.raw-data-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+.raw-data-table th, .raw-data-table td { padding: 12px 14px; border-bottom: 1px solid #edf0f5; text-align: left; white-space: nowrap; }
+.raw-data-table th { background: #667eea; color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.raw-data-table tr:last-child td { border-bottom: none; }
+.raw-data-table tbody tr:nth-child(even) { background: #fafbff; }
 
 @media (max-width: 600px) {
   header { flex-direction: column; gap: 15px; text-align: center; }

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Raw Data - R4 WiFi Voltage Monitor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Raw Data</h1>
+      <a class="header-link" href="index.html">Dashboard</a>
+    </header>
+
+    <main>
+      <div class="raw-data-summary" id="rawDataSummary">Loading raw data...</div>
+
+      <div class="table-container">
+        <table class="raw-data-table">
+          <thead>
+            <tr>
+              <th scope="col">Timestamp</th>
+              <th scope="col">Voltage</th>
+              <th scope="col">Current</th>
+              <th scope="col">Power</th>
+            </tr>
+          </thead>
+          <tbody id="rawDataTableBody">
+            <tr>
+              <td colspan="4">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="raw-data.js"></script>
+</body>
+</html>
