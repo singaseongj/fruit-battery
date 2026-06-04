@@ -91,6 +91,7 @@ async function fetchData() {
     console.log('[local json] Request completed.', { ok: response.ok, status: response.status });
     const payload = await response.json();
     const data = Array.isArray(payload.records) ? payload.records : [];
+    const noNewerData = isNoNewerDataPayload(payload);
 
     if (data.length > 0) {
       console.log(`[local json] Successfully loaded ${data.length} record(s).`);
@@ -102,16 +103,23 @@ async function fetchData() {
       document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
       document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
 
-      // Update last update time from the latest logged data record.
-      document.getElementById('lastUpdate').textContent = formatLoggedDate(latestData.timestamp);
+      // If the backend updater ran but found no newer records, show that run time.
+      // Otherwise, show the latest logged data record time.
+      document.getElementById('lastUpdate').textContent = noNewerData
+        ? formatLoggedDate(payload.updatedAt)
+        : formatLoggedDate(latestData.timestamp);
 
       // Update chart with last N data points
       updateChart(data);
 
-      // Update connection status based on whether the latest logged data is fresh.
-      updateStatus(isLatestDataFresh(latestData));
+      // A successful updater run with no newer records means the device is disconnected.
+      // Otherwise, fall back to freshness based on the latest logged data.
+      updateStatus(noNewerData ? false : isLatestDataFresh(latestData));
     } else {
       console.warn('[local json] Fetch succeeded but returned no records.');
+      if (payload.updatedAt) {
+        document.getElementById('lastUpdate').textContent = formatLoggedDate(payload.updatedAt);
+      }
       updateStatus(false);
     }
   } catch (error) {
@@ -156,6 +164,10 @@ function parseSeoulTimestamp(timestamp) {
 
   const parsed = new Date(timestampText);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function isNoNewerDataPayload(payload) {
+  return payload?.connected === false || payload?.hasNewData === false || payload?.disconnectedReason === 'no-newer-data';
 }
 
 function isLatestDataFresh(latestData) {
