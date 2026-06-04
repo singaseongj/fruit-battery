@@ -8,6 +8,7 @@ const MAX_RECORDS = 5_000;
 const SEOUL_UTC_OFFSET_HOURS = 9;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 1_000;
+const NO_NEWER_DATA_REASON = 'no-newer-data';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -55,7 +56,7 @@ function getRecordTimestampMs(record) {
   return parsed ? parsed.getTime() : null;
 }
 
-function selectMostRecentRecords(records, maxRecords = MAX_RECORDS) {
+function sortRecordsByTimestamp(records) {
   return records
     .map((record, index) => ({ record, index, timestampMs: getRecordTimestampMs(record) }))
     .sort((recordA, recordB) => {
@@ -67,8 +68,52 @@ function selectMostRecentRecords(records, maxRecords = MAX_RECORDS) {
       if (!Number.isFinite(timeA) && Number.isFinite(timeB)) return -1;
       return recordA.index - recordB.index;
     })
-    .slice(-maxRecords)
     .map(({ record }) => record);
+}
+
+function selectMostRecentRecords(records, maxRecords = MAX_RECORDS) {
+  return sortRecordsByTimestamp(records).slice(-maxRecords);
+}
+
+function getLatestTimestampMs(records) {
+  if (!Array.isArray(records) || records.length === 0) return null;
+
+  return records.reduce((latestTimestampMs, record) => {
+    const timestampMs = getRecordTimestampMs(record);
+
+    if (!Number.isFinite(timestampMs)) return latestTimestampMs;
+    if (!Number.isFinite(latestTimestampMs) || timestampMs > latestTimestampMs) return timestampMs;
+
+    return latestTimestampMs;
+  }, null);
+}
+
+function hasNewerRecords(fetchedRecords, currentRecords) {
+  if (!Array.isArray(fetchedRecords) || fetchedRecords.length === 0) return false;
+  if (!Array.isArray(currentRecords) || currentRecords.length === 0) return true;
+
+  const fetchedLatestTimestampMs = getLatestTimestampMs(fetchedRecords);
+  const currentLatestTimestampMs = getLatestTimestampMs(currentRecords);
+
+  if (!Number.isFinite(fetchedLatestTimestampMs)) return false;
+  if (!Number.isFinite(currentLatestTimestampMs)) return true;
+
+  return fetchedLatestTimestampMs > currentLatestTimestampMs;
+}
+
+async function readCurrentData() {
+  try {
+    const currentDataText = await fs.readFile(DATA_FILE, 'utf8');
+    const currentData = JSON.parse(currentDataText);
+
+    return {
+      updatedAt: currentData?.updatedAt || null,
+      records: Array.isArray(currentData?.records) ? currentData.records : []
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { updatedAt: null, records: [] };
+    throw error;
+  }
 }
 
 async function fetchWithRetry(url) {
@@ -114,16 +159,28 @@ async function main() {
     throw new Error('Missing WEB_APP_URL environment variable');
   }
 
+  const currentData = await readCurrentData();
   const response = await fetchWithRetry(WEB_APP_URL);
   const payload = await response.json();
-  const records = Array.isArray(payload) ? selectMostRecentRecords(payload) : [];
+  const fetchedRecords = Array.isArray(payload) ? selectMostRecentRecords(payload) : [];
+  const hasNewData = hasNewerRecords(fetchedRecords, currentData.records);
+  const records = hasNewData ? fetchedRecords : currentData.records;
   const wrapped = {
     updatedAt: new Date().toISOString(),
+    connected: hasNewData,
+    hasNewData,
+    disconnectedReason: hasNewData ? null : NO_NEWER_DATA_REASON,
     records
   };
 
   await fs.writeFile(DATA_FILE, JSON.stringify(wrapped, null, 2) + '\n', 'utf8');
-  console.log(`Updated data.json at ${wrapped.updatedAt} with ${wrapped.records.length} of ${Array.isArray(payload) ? payload.length : 0} records.`);
+
+  const fetchedCount = Array.isArray(payload) ? payload.length : 0;
+  if (hasNewData) {
+    console.log(`Updated data.json at ${wrapped.updatedAt} with ${wrapped.records.length} of ${fetchedCount} records.`);
+  } else {
+    console.log(`No newer data fetched at ${wrapped.updatedAt}; kept ${wrapped.records.length} current record(s) and marked disconnected.`);
+  }
 }
 
 if (require.main === module) {
@@ -135,6 +192,9 @@ if (require.main === module) {
 
 module.exports = {
   MAX_RECORDS,
+  NO_NEWER_DATA_REASON,
+  getLatestTimestampMs,
+  hasNewerRecords,
   parseSeoulTimestamp,
   selectMostRecentRecords
 };
