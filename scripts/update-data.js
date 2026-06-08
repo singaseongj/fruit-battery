@@ -3,7 +3,7 @@ const path = require('path');
 
 const WEB_APP_URL = process.env.WEB_APP_URL;
 const DATA_FILE = path.join(__dirname, '..', 'data.json');
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RECORDS = 5_000;
 const SEOUL_UTC_OFFSET_HOURS = 9;
 const MAX_RETRIES = 4;
@@ -12,6 +12,24 @@ const NO_NEWER_DATA_REASON = 'no-newer-data';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatDurationMs(startedAt) {
+  return `${Date.now() - startedAt}ms`;
+}
+
+async function measureStep(label, operation) {
+  const startedAt = Date.now();
+  console.log(`[update-data] Starting ${label}...`);
+
+  try {
+    const result = await operation();
+    console.log(`[update-data] Finished ${label} in ${formatDurationMs(startedAt)}.`);
+    return result;
+  } catch (error) {
+    console.error(`[update-data] Failed ${label} after ${formatDurationMs(startedAt)}: ${error.message}`);
+    throw error;
+  }
 }
 
 function isRetryableStatus(status) {
@@ -120,8 +138,10 @@ async function fetchWithRetry(url) {
   let lastError;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
+    const attemptStartedAt = Date.now();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} started with ${REQUEST_TIMEOUT_MS}ms timeout.`);
 
     try {
       const response = await fetch(url, {
@@ -132,6 +152,8 @@ async function fetchWithRetry(url) {
         }
       });
 
+      console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} received HTTP ${response.status} in ${formatDurationMs(attemptStartedAt)}.`);
+
       if (response.ok) return response;
 
       const error = new Error(`HTTP ${response.status}`);
@@ -139,12 +161,15 @@ async function fetchWithRetry(url) {
 
       lastError = error;
       const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+      console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} retrying after ${delayMs}ms due to ${error.message}.`);
       await sleep(delayMs);
     } catch (error) {
       const handledError = error?.name === 'AbortError' ? new Error(`Timeout after ${REQUEST_TIMEOUT_MS}ms`) : error;
+      console.error(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} failed after ${formatDurationMs(attemptStartedAt)}: ${handledError.message}`);
       if (attempt === MAX_RETRIES) throw handledError;
       lastError = handledError;
       const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+      console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} retrying after ${delayMs}ms.`);
       await sleep(delayMs);
     } finally {
       clearTimeout(timeout);
@@ -159,23 +184,28 @@ async function main() {
     throw new Error('Missing WEB_APP_URL environment variable');
   }
 
-  const currentData = await readCurrentData();
-  const response = await fetchWithRetry(WEB_APP_URL);
-  const payload = await response.json();
-  const fetchedRecords = Array.isArray(payload) ? selectMostRecentRecords(payload) : [];
-  const hasNewData = hasNewerRecords(fetchedRecords, currentData.records);
-  const records = hasNewData ? fetchedRecords : currentData.records;
-  const wrapped = {
-    updatedAt: new Date().toISOString(),
-    connected: hasNewData,
-    hasNewData,
-    disconnectedReason: hasNewData ? null : NO_NEWER_DATA_REASON,
-    records
-  };
+  const currentData = await measureStep('reading current data.json', readCurrentData);
+  const response = await measureStep('fetching remote data', () => fetchWithRetry(WEB_APP_URL));
+  const payload = await measureStep('parsing remote JSON response', () => response.json());
+  const { fetchedRecords, hasNewData, records, wrapped } = await measureStep('preparing data.json payload', async () => {
+    const fetchedRecords = Array.isArray(payload) ? selectMostRecentRecords(payload) : [];
+    const hasNewData = hasNewerRecords(fetchedRecords, currentData.records);
+    const records = hasNewData ? fetchedRecords : currentData.records;
+    const wrapped = {
+      updatedAt: new Date().toISOString(),
+      connected: hasNewData,
+      hasNewData,
+      disconnectedReason: hasNewData ? null : NO_NEWER_DATA_REASON,
+      records
+    };
 
-  await fs.writeFile(DATA_FILE, JSON.stringify(wrapped, null, 2) + '\n', 'utf8');
+    return { fetchedRecords, hasNewData, records, wrapped };
+  });
+
+  await measureStep('writing data.json', () => fs.writeFile(DATA_FILE, JSON.stringify(wrapped, null, 2) + '\n', 'utf8'));
 
   const fetchedCount = Array.isArray(payload) ? payload.length : 0;
+  console.log(`[update-data] Prepared ${fetchedRecords.length} selected record(s); writing ${records.length} record(s).`);
   if (hasNewData) {
     console.log(`Updated data.json at ${wrapped.updatedAt} with ${wrapped.records.length} of ${fetchedCount} records.`);
   } else {
