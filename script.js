@@ -101,7 +101,7 @@ async function fetchData() {
       // Update display values
       document.getElementById('voltageValue').textContent = toNumber(latestData.voltage).toFixed(2);
       document.getElementById('currentValue').textContent = toNumber(latestData.current).toFixed(2);
-      document.getElementById('powerValue').textContent = toNumber(latestData.power).toFixed(2);
+      document.getElementById('powerValue').textContent = toMilliwatts(latestData.power).toFixed(2);
 
       // If the backend updater ran but found no newer records, show that run time.
       // Otherwise, show the latest logged data record time.
@@ -131,6 +131,10 @@ async function fetchData() {
 function toNumber(value) {
   const num = parseFloat(value);
   return Number.isFinite(num) ? num : 0;
+}
+
+function toMilliwatts(watts) {
+  return toNumber(watts) * 1000;
 }
 
 function parseSeoulTimestamp(timestamp) {
