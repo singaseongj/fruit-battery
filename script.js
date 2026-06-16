@@ -2,7 +2,7 @@ const DATA_FILE_URL = './data.json';
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
 const SEOUL_UTC_OFFSET_HOURS = 9;
 const DATA_FRESHNESS_THRESHOLD_MS = 5 * 60 * 60 * 1000;
-const CONNECTION_GAP_THRESHOLD_MS = 2 * 60 * 1000;
+const CONNECTION_GAP_THRESHOLD_MS = 30 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Chart configuration
@@ -192,7 +192,7 @@ function getSortedTimestampMs(data) {
 function getCurrentConnectionStartedAt(timestamps) {
   if (timestamps.length === 0) return null;
 
-  // Treat any data.json timestamp gap over two minutes as a disconnect/reconnect boundary.
+  // Treat any data.json timestamp gap over 30 minutes as a disconnect/reconnect boundary.
   let startedAt = timestamps[0];
 
   for (let index = 1; index < timestamps.length; index += 1) {
