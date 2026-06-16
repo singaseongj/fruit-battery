@@ -1,5 +1,6 @@
 const RAW_DATA_FILE_URL = './data.json';
 const SEOUL_UTC_OFFSET_HOURS = 9;
+const MAX_VISIBLE_RAW_ROWS = 5000;
 
 function toNumber(value) {
   const num = parseFloat(value);
@@ -85,14 +86,23 @@ async function loadRawData() {
 
   try {
     const cacheBustedUrl = `${RAW_DATA_FILE_URL}?t=${Date.now()}`;
-    const response = await fetch(cacheBustedUrl, { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
+    const response = await fetch(cacheBustedUrl, {
+      cache: 'reload',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const payload = await response.json();
-    const records = Array.isArray(payload.records) ? [...payload.records].sort(compareRecordsByTimestamp) : [];
+    const records = Array.isArray(payload.records)
+      ? [...payload.records].sort(compareRecordsByTimestamp)
+      : [];
 
-    renderTable(records);
-    summary.textContent = `Showing ${records.length} record(s), oldest to newest.`;
+    const visibleRecords = records.slice(-MAX_VISIBLE_RAW_ROWS);
+
+    renderTable(visibleRecords);
+    summary.textContent =
+      `Showing latest ${visibleRecords.length} of ${records.length} record(s), oldest to newest.`;
   } catch (error) {
     console.error('Error loading raw data:', error);
     renderTable([]);
