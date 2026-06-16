@@ -2,6 +2,8 @@ const DATA_FILE_URL = './data.json';
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
 const SEOUL_UTC_OFFSET_HOURS = 9;
 const DATA_FRESHNESS_THRESHOLD_MS = 5 * 60 * 60 * 1000;
+const CONNECTION_GAP_THRESHOLD_MS = 2 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Chart configuration
 let chart = null;
@@ -114,17 +116,21 @@ async function fetchData() {
 
       // A successful updater run with no newer records means the device is disconnected.
       // Otherwise, fall back to freshness based on the latest logged data.
-      updateStatus(noNewerData ? false : isLatestDataFresh(latestData));
+      const connected = noNewerData ? false : isLatestDataFresh(latestData);
+      updateStatus(connected);
+      updateConnectivityLongevity(data, connected);
     } else {
       console.warn('[local json] Fetch succeeded but returned no records.');
       if (payload.updatedAt) {
         document.getElementById('lastUpdate').textContent = formatLoggedDate(payload.updatedAt);
       }
       updateStatus(false);
+      updateConnectivityLongevity([], false);
     }
   } catch (error) {
     console.error('Error fetching data:', error);
     updateStatus(false);
+    updateConnectivityLongevity([], false);
   }
 }
 
@@ -168,6 +174,72 @@ function parseSeoulTimestamp(timestamp) {
 
   const parsed = new Date(timestampText);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+
+function getRecordTimestampMs(record) {
+  const parsed = parseSeoulTimestamp(record?.timestamp);
+  return parsed ? parsed.getTime() : null;
+}
+
+function getSortedTimestampMs(data) {
+  return data
+    .map(getRecordTimestampMs)
+    .filter(Number.isFinite)
+    .sort((timeA, timeB) => timeA - timeB);
+}
+
+function getCurrentConnectionStartedAt(timestamps) {
+  if (timestamps.length === 0) return null;
+
+  // Treat any data.json timestamp gap over two minutes as a disconnect/reconnect boundary.
+  let startedAt = timestamps[0];
+
+  for (let index = 1; index < timestamps.length; index += 1) {
+    const gapMs = timestamps[index] - timestamps[index - 1];
+
+    if (gapMs > CONNECTION_GAP_THRESHOLD_MS) {
+      startedAt = timestamps[index];
+    }
+  }
+
+  return startedAt;
+}
+
+function formatElapsedDays(startedAtMs, endedAtMs = Date.now()) {
+  if (!Number.isFinite(startedAtMs)) return '--';
+
+  const elapsedMs = Math.max(0, endedAtMs - startedAtMs);
+  const elapsedDays = elapsedMs / DAY_MS;
+
+  if (elapsedDays < 0.1) return '<0.1';
+  if (elapsedDays < 10) return elapsedDays.toFixed(1);
+  return Math.floor(elapsedDays).toString();
+}
+
+function updateConnectivityLongevity(data, connected) {
+  const valueElement = document.getElementById('connectivityDays');
+  const labelElement = document.getElementById('connectivityLabel');
+
+  if (!valueElement || !labelElement) return;
+
+  const timestamps = getSortedTimestampMs(data);
+  const latestTimestamp = timestamps[timestamps.length - 1];
+
+  if (!Number.isFinite(latestTimestamp)) {
+    valueElement.textContent = '--';
+    labelElement.textContent = 'No connection history';
+    return;
+  }
+
+  const transitionTimestamp = connected
+    ? getCurrentConnectionStartedAt(timestamps)
+    : latestTimestamp;
+
+  valueElement.textContent = formatElapsedDays(transitionTimestamp);
+  labelElement.textContent = connected
+    ? `days since reconnected (${formatLoggedDate(new Date(transitionTimestamp))})`
+    : `days since disconnected (${formatLoggedDate(new Date(transitionTimestamp))})`;
 }
 
 function isNoNewerDataPayload(payload) {
