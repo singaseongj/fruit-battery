@@ -40,6 +40,8 @@ main { padding: 40px; }
 .data-display { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
 .metric { background: #f5f7fa; padding: 20px; border-radius: 15px; text-align: center; border-left: 4px solid #667eea; }
 .metric h2 { font-size: 14px; color: #666; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.metric-title-link { color: inherit; text-decoration: none; }
+.metric-title-link:hover { text-decoration: underline; }
 .metric .value { font-size: 36px; font-weight: bold; color: #667eea; margin-bottom: 5px; }
 .metric .unit { font-size: 12px; color: #999; }
 .connectivity-metric { border-left-color: #2ed573; }
