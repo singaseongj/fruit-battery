@@ -3,12 +3,15 @@ const path = require('path');
 
 const WEB_APP_URL = process.env.WEB_APP_URL;
 const DATA_FILE = path.join(__dirname, '..', 'data.json');
+const LONGEVITY_FILE = path.join(__dirname, '..', 'longevity.json');
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_RECORDS = 20_000;
 const SEOUL_UTC_OFFSET_HOURS = 9;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 1_000;
 const NO_NEWER_DATA_REASON = 'no-newer-data';
+const CONNECTION_GAP_THRESHOLD_MS = 30 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -134,6 +137,95 @@ async function readCurrentData() {
   }
 }
 
+
+function toIsoString(timestampMs) {
+  return Number.isFinite(timestampMs) ? new Date(timestampMs).toISOString() : null;
+}
+
+function calculateLongevityDays(birthMs, deathMs) {
+  if (!Number.isFinite(birthMs) || !Number.isFinite(deathMs)) return null;
+  return Number(((Math.max(0, deathMs - birthMs)) / DAY_MS).toFixed(3));
+}
+
+function getCurrentConnectionStartedAt(records) {
+  const timestamps = sortRecordsByTimestamp(records)
+    .map(getRecordTimestampMs)
+    .filter(Number.isFinite);
+
+  if (timestamps.length === 0) return null;
+
+  let startedAt = timestamps[0];
+  for (let index = 1; index < timestamps.length; index += 1) {
+    if (timestamps[index] - timestamps[index - 1] > CONNECTION_GAP_THRESHOLD_MS) {
+      startedAt = timestamps[index];
+    }
+  }
+
+  return startedAt;
+}
+
+async function readCurrentLongevity() {
+  try {
+    const longevityText = await fs.readFile(LONGEVITY_FILE, 'utf8');
+    const longevity = JSON.parse(longevityText);
+    return {
+      updatedAt: longevity?.updatedAt || null,
+      entries: Array.isArray(longevity?.entries) ? longevity.entries : []
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { updatedAt: null, entries: [] };
+    throw error;
+  }
+}
+
+function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
+  const entries = [...currentLongevity.entries];
+  const latestTimestampMs = getLatestTimestampMs(records);
+  const birthMs = getCurrentConnectionStartedAt(records);
+  const detectedAt = updatedAt;
+
+  if (!Number.isFinite(birthMs)) {
+    return { updatedAt, entries };
+  }
+
+  const birth = toIsoString(birthMs);
+  const lastEntry = entries[entries.length - 1];
+
+  if (connected) {
+    const nowMs = Date.parse(updatedAt);
+    const openEntry = lastEntry && lastEntry.birth === birth && !lastEntry.death;
+    const updatedEntry = {
+      ...(openEntry ? lastEntry : {}),
+      birth,
+      death: null,
+      status: 'alive',
+      detectedAt,
+      longevityDays: calculateLongevityDays(birthMs, Number.isFinite(nowMs) ? nowMs : Date.now())
+    };
+
+    if (openEntry) entries[entries.length - 1] = updatedEntry;
+    else entries.push(updatedEntry);
+
+    return { updatedAt, entries };
+  }
+
+  const deathMs = Number.isFinite(latestTimestampMs) ? latestTimestampMs : Date.parse(updatedAt);
+  const death = toIsoString(deathMs);
+  const deadEntry = {
+    ...(lastEntry?.birth === birth ? lastEntry : {}),
+    birth,
+    death,
+    status: 'dead',
+    detectedAt,
+    longevityDays: calculateLongevityDays(birthMs, deathMs)
+  };
+
+  if (lastEntry?.birth === birth) entries[entries.length - 1] = deadEntry;
+  else entries.push(deadEntry);
+
+  return { updatedAt, entries };
+}
+
 async function fetchWithRetry(url) {
   let lastError;
 
@@ -185,6 +277,7 @@ async function main() {
   }
 
   const currentData = await measureStep('reading current data.json', readCurrentData);
+  const currentLongevity = await measureStep('reading current longevity.json', readCurrentLongevity);
   const response = await measureStep('fetching remote data', () => fetchWithRetry(WEB_APP_URL));
   const payload = await measureStep('parsing remote JSON response', () => response.json());
   const { fetchedRecords, hasNewData, records, wrapped } = await measureStep('preparing data.json payload', async () => {
@@ -203,6 +296,11 @@ async function main() {
   });
 
   await measureStep('writing data.json', () => fs.writeFile(DATA_FILE, JSON.stringify(wrapped, null, 2) + '\n', 'utf8'));
+
+  const longevity = await measureStep('preparing longevity.json payload', () =>
+    Promise.resolve(updateLongevityLog(currentLongevity, records, hasNewData, wrapped.updatedAt))
+  );
+  await measureStep('writing longevity.json', () => fs.writeFile(LONGEVITY_FILE, JSON.stringify(longevity, null, 2) + '\n', 'utf8'));
 
   const fetchedCount = Array.isArray(payload) ? payload.length : 0;
   console.log(`[update-data] Prepared ${fetchedRecords.length} selected record(s); writing ${records.length} record(s).`);
@@ -223,8 +321,11 @@ if (require.main === module) {
 module.exports = {
   MAX_RECORDS,
   NO_NEWER_DATA_REASON,
+  calculateLongevityDays,
+  getCurrentConnectionStartedAt,
   getLatestTimestampMs,
   hasNewerRecords,
   parseSeoulTimestamp,
-  selectMostRecentRecords
+  selectMostRecentRecords,
+  updateLongevityLog
 };
