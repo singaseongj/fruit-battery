@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-battery-data-main
+  cancel-in-progress: false
+
 jobs:
   refresh-data:
     runs-on: ubuntu-latest
