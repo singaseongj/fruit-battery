@@ -11,10 +11,9 @@ function formatDays(days) {
   return Number.isFinite(numericDays) ? numericDays.toFixed(3) : '--';
 }
 
-function createCell(text, title = '') {
+function createCell(text) {
   const cell = document.createElement('td');
   cell.textContent = text;
-  if (title) cell.title = title;
   return cell;
 }
 
@@ -42,8 +41,63 @@ function getEntriesWithIds(entries) {
   }));
 }
 
-function formatNoteIndicator(entry) {
-  return entry.note ? '!' : '';
+function closeNoteTooltip() {
+  document.querySelector('.note-tooltip')?.remove();
+}
+
+function positionNoteTooltip(tooltip, button) {
+  const buttonRect = button.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const margin = 12;
+  const top = Math.min(
+    window.scrollY + buttonRect.bottom + 8,
+    window.scrollY + window.innerHeight - tooltipRect.height - margin
+  );
+  const left = Math.min(
+    Math.max(window.scrollX + buttonRect.left, window.scrollX + margin),
+    window.scrollX + window.innerWidth - tooltipRect.width - margin
+  );
+
+  tooltip.style.top = `${Math.max(window.scrollY + margin, top)}px`;
+  tooltip.style.left = `${left}px`;
+}
+
+function showNoteTooltip(note, button, entryId) {
+  closeNoteTooltip();
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'note-tooltip';
+  tooltip.setAttribute('role', 'dialog');
+  tooltip.setAttribute('aria-label', 'Longevity note');
+  tooltip.dataset.noteId = String(entryId);
+  tooltip.textContent = note;
+  document.body.appendChild(tooltip);
+  positionNoteTooltip(tooltip, button);
+}
+
+function createNoteCell(entry) {
+  const cell = document.createElement('td');
+  if (!entry.note) return cell;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'note-indicator';
+  button.textContent = '!';
+  button.setAttribute('aria-label', `Show note for longevity ID ${entry.id}`);
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+
+    const currentTooltip = document.querySelector('.note-tooltip');
+    if (currentTooltip?.dataset.noteId === String(entry.id)) {
+      closeNoteTooltip();
+      return;
+    }
+
+    showNoteTooltip(entry.note, button, entry.id);
+  });
+  cell.appendChild(button);
+
+  return cell;
 }
 
 function renderTable(entries) {
@@ -67,7 +121,7 @@ function renderTable(entries) {
       createCell(formatDate(entry.death)),
       createCell(formatDays(entry.longevityDays)),
       createCell(formatStatus(entry)),
-      createCell(formatNoteIndicator(entry), entry.note || '')
+      createNoteCell(entry)
     );
     tableBody.appendChild(row);
   });
@@ -96,4 +150,8 @@ async function loadLongevity() {
   }
 }
 
+document.addEventListener('click', closeNoteTooltip);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeNoteTooltip();
+});
 document.addEventListener('DOMContentLoaded', loadLongevity);
