@@ -1,4 +1,5 @@
 const DATA_FILE_URL = './data.json';
+const LONGEVITY_FILE_URL = './longevity.json';
 const DATA_CACHE_KEY = 'voltage-monitor-cache';
 const SEOUL_UTC_OFFSET_HOURS = 9;
 const DATA_FRESHNESS_THRESHOLD_MS = 5 * 60 * 60 * 1000;
@@ -118,19 +119,19 @@ async function fetchData() {
       // Otherwise, fall back to freshness based on the latest logged data.
       const connected = noNewerData ? false : isLatestDataFresh(latestData);
       updateStatus(connected);
-      updateConnectivityLongevity(data, connected);
+      updateConnectivityLongevityFromLog(data, connected);
     } else {
       console.warn('[local json] Fetch succeeded but returned no records.');
       if (payload.updatedAt) {
         document.getElementById('lastUpdate').textContent = formatLoggedDate(payload.updatedAt);
       }
       updateStatus(false);
-      updateConnectivityLongevity([], false);
+      updateConnectivityLongevityFromLog([], false);
     }
   } catch (error) {
     console.error('Error fetching data:', error);
     updateStatus(false);
-    updateConnectivityLongevity([], false);
+    updateConnectivityLongevityFromLog([], false);
   }
 }
 
@@ -215,6 +216,50 @@ function formatElapsedDays(startedAtMs, endedAtMs = Date.now()) {
   if (elapsedDays < 0.1) return '<0.1';
   if (elapsedDays < 10) return elapsedDays.toFixed(1);
   return Math.floor(elapsedDays).toString();
+}
+
+function getAliveLongevityEntry(entries) {
+  if (!Array.isArray(entries)) return null;
+
+  return entries
+    .filter((entry) => !entry.death && (entry.status || '').toLowerCase().startsWith('alive'))
+    .sort((entryA, entryB) => Date.parse(entryB.birth) - Date.parse(entryA.birth))[0] || null;
+}
+
+async function updateConnectivityLongevityFromLog(fallbackData, fallbackConnected) {
+  try {
+    const response = await fetch(`${LONGEVITY_FILE_URL}?t=${Date.now()}`, {
+      cache: 'reload',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const payload = await response.json();
+    const aliveEntry = getAliveLongevityEntry(payload.entries);
+
+    if (!aliveEntry) {
+      updateConnectivityLongevity(fallbackData, fallbackConnected);
+      return;
+    }
+
+    const birthMs = Date.parse(aliveEntry.birth);
+    if (!Number.isFinite(birthMs)) {
+      updateConnectivityLongevity(fallbackData, fallbackConnected);
+      return;
+    }
+
+    const valueElement = document.getElementById('connectivityDays');
+    const labelElement = document.getElementById('connectivityLabel');
+
+    if (!valueElement || !labelElement) return;
+
+    valueElement.textContent = formatElapsedDays(birthMs);
+    labelElement.textContent = `days alive since ${formatLoggedDate(new Date(birthMs))}`;
+  } catch (error) {
+    console.warn('Unable to load longevity log:', error);
+    updateConnectivityLongevity(fallbackData, fallbackConnected);
+  }
 }
 
 function updateConnectivityLongevity(data, connected) {

@@ -164,13 +164,27 @@ function getCurrentConnectionStartedAt(records) {
   return startedAt;
 }
 
+function getEntriesWithSequentialIds(entries) {
+  return [...entries]
+    .sort((entryA, entryB) => {
+      const birthA = Date.parse(entryA.birth);
+      const birthB = Date.parse(entryB.birth);
+
+      if (Number.isFinite(birthA) && Number.isFinite(birthB) && birthA !== birthB) return birthA - birthB;
+      if (Number.isFinite(birthA) && !Number.isFinite(birthB)) return -1;
+      if (!Number.isFinite(birthA) && Number.isFinite(birthB)) return 1;
+      return 0;
+    })
+    .map((entry, index) => ({ ...entry, id: index + 1 }));
+}
+
 async function readCurrentLongevity() {
   try {
     const longevityText = await fs.readFile(LONGEVITY_FILE, 'utf8');
     const longevity = JSON.parse(longevityText);
     return {
       updatedAt: longevity?.updatedAt || null,
-      entries: Array.isArray(longevity?.entries) ? longevity.entries : []
+      entries: Array.isArray(longevity?.entries) ? getEntriesWithSequentialIds(longevity.entries) : []
     };
   } catch (error) {
     if (error?.code === 'ENOENT') return { updatedAt: null, entries: [] };
@@ -185,7 +199,7 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
   const detectedAt = updatedAt;
 
   if (!Number.isFinite(birthMs)) {
-    return { updatedAt, entries };
+    return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
   }
 
   const birth = toIsoString(birthMs);
@@ -206,7 +220,7 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
     if (openEntry) entries[entries.length - 1] = updatedEntry;
     else entries.push(updatedEntry);
 
-    return { updatedAt, entries };
+    return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
   }
 
   const deathMs = Number.isFinite(latestTimestampMs) ? latestTimestampMs : Date.parse(updatedAt);
@@ -223,7 +237,7 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
   if (lastEntry?.birth === birth) entries[entries.length - 1] = deadEntry;
   else entries.push(deadEntry);
 
-  return { updatedAt, entries };
+  return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
 }
 
 async function fetchWithRetry(url) {

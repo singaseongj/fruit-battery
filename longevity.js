@@ -11,9 +11,10 @@ function formatDays(days) {
   return Number.isFinite(numericDays) ? numericDays.toFixed(3) : '--';
 }
 
-function createCell(text) {
+function createCell(text, title = '') {
   const cell = document.createElement('td');
   cell.textContent = text;
+  if (title) cell.title = title;
   return cell;
 }
 
@@ -30,8 +31,19 @@ function sortEntriesByBirth(entries) {
 }
 
 function formatStatus(entry) {
-  if (entry.status) return entry.note ? `${entry.status} — ${entry.note}` : entry.status;
+  if (entry.status) return entry.status;
   return entry.death ? 'dead' : 'alive';
+}
+
+function getEntriesWithIds(entries) {
+  return sortEntriesByBirth(entries).map((entry, index) => ({
+    ...entry,
+    id: Number.isInteger(Number(entry.id)) ? Number(entry.id) : index + 1
+  }));
+}
+
+function formatNoteIndicator(entry) {
+  return entry.note ? '!' : '';
 }
 
 function renderTable(entries) {
@@ -47,15 +59,15 @@ function renderTable(entries) {
     return;
   }
 
-  sortEntriesByBirth(entries).forEach((entry, index) => {
+  getEntriesWithIds(entries).forEach((entry) => {
     const row = document.createElement('tr');
     row.append(
-      createCell(String(index + 1)),
+      createCell(String(entry.id)),
       createCell(formatDate(entry.birth)),
       createCell(formatDate(entry.death)),
       createCell(formatDays(entry.longevityDays)),
       createCell(formatStatus(entry)),
-      createCell(formatDate(entry.detectedAt))
+      createCell(formatNoteIndicator(entry), entry.note || '')
     );
     tableBody.appendChild(row);
   });
@@ -76,7 +88,7 @@ async function loadLongevity() {
     const entries = Array.isArray(payload.entries) ? payload.entries : [];
 
     renderTable(entries);
-    summary.textContent = `Showing ${entries.length} longevity entr${entries.length === 1 ? 'y' : 'ies'}. Last workflow update: ${formatDate(payload.updatedAt)}.`;
+    summary.textContent = `Showing ${entries.length} longevity entr${entries.length === 1 ? 'y' : 'ies'}. Last updated: ${formatDate(payload.updatedAt)}.`;
   } catch (error) {
     console.error('Error loading longevity data:', error);
     renderTable([]);
