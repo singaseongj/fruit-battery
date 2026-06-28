@@ -3,11 +3,12 @@
   "entries": [
     {
       "birth": "2026-06-15T06:51:24.000Z",
-      "death": "2026-06-27T22:15:42.000Z",
-      "status": "alive (router interruption)",
+      "death": null,
+      "status": "alive",
       "detectedAt": "2026-06-27T23:46:53.076Z",
-      "longevityDays": 12.642,
-      "note": "Connection was missing for about 50 minutes and revived; likely temporary router downtime. The 2026-06-27T23:05:59.000Z birth was not treated as a real new life."
+      "longevityDays": 12.705,
+      "note": "Connection was missing for about 50 minutes and revived; likely temporary router downtime. The 2026-06-27T23:05:59.000Z birth was not treated as a real new life.",
+      "id": 1
     }
   ]
 }

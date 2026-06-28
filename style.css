@@ -71,6 +71,36 @@ main { padding: 40px; }
 .raw-data-table tr:last-child td { border-bottom: none; }
 .raw-data-table tbody tr:nth-child(even) { background: #fafbff; }
 
+.note-indicator {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #ffb142;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1;
+}
+.note-indicator:hover,
+.note-indicator:focus-visible {
+  background: #ff9f1a;
+  outline: 3px solid rgba(255, 177, 66, 0.35);
+}
+.note-tooltip {
+  position: absolute;
+  z-index: 1000;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #2f3542;
+  color: #fff;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
 @media (max-width: 600px) {
   header { flex-direction: column; gap: 15px; text-align: center; }
   header h1 { font-size: 22px; }

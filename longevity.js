@@ -30,8 +30,74 @@ function sortEntriesByBirth(entries) {
 }
 
 function formatStatus(entry) {
-  if (entry.status) return entry.note ? `${entry.status} — ${entry.note}` : entry.status;
+  if (entry.status) return entry.status;
   return entry.death ? 'dead' : 'alive';
+}
+
+function getEntriesWithIds(entries) {
+  return sortEntriesByBirth(entries).map((entry, index) => ({
+    ...entry,
+    id: Number.isInteger(Number(entry.id)) ? Number(entry.id) : index + 1
+  }));
+}
+
+function closeNoteTooltip() {
+  document.querySelector('.note-tooltip')?.remove();
+}
+
+function positionNoteTooltip(tooltip, button) {
+  const buttonRect = button.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const margin = 12;
+  const top = Math.min(
+    window.scrollY + buttonRect.bottom + 8,
+    window.scrollY + window.innerHeight - tooltipRect.height - margin
+  );
+  const left = Math.min(
+    Math.max(window.scrollX + buttonRect.left, window.scrollX + margin),
+    window.scrollX + window.innerWidth - tooltipRect.width - margin
+  );
+
+  tooltip.style.top = `${Math.max(window.scrollY + margin, top)}px`;
+  tooltip.style.left = `${left}px`;
+}
+
+function showNoteTooltip(note, button, entryId) {
+  closeNoteTooltip();
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'note-tooltip';
+  tooltip.setAttribute('role', 'dialog');
+  tooltip.setAttribute('aria-label', 'Longevity note');
+  tooltip.dataset.noteId = String(entryId);
+  tooltip.textContent = note;
+  document.body.appendChild(tooltip);
+  positionNoteTooltip(tooltip, button);
+}
+
+function createNoteCell(entry) {
+  const cell = document.createElement('td');
+  if (!entry.note) return cell;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'note-indicator';
+  button.textContent = '!';
+  button.setAttribute('aria-label', `Show note for longevity ID ${entry.id}`);
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+
+    const currentTooltip = document.querySelector('.note-tooltip');
+    if (currentTooltip?.dataset.noteId === String(entry.id)) {
+      closeNoteTooltip();
+      return;
+    }
+
+    showNoteTooltip(entry.note, button, entry.id);
+  });
+  cell.appendChild(button);
+
+  return cell;
 }
 
 function renderTable(entries) {
@@ -47,15 +113,15 @@ function renderTable(entries) {
     return;
   }
 
-  sortEntriesByBirth(entries).forEach((entry, index) => {
+  getEntriesWithIds(entries).forEach((entry) => {
     const row = document.createElement('tr');
     row.append(
-      createCell(String(index + 1)),
+      createCell(String(entry.id)),
       createCell(formatDate(entry.birth)),
       createCell(formatDate(entry.death)),
       createCell(formatDays(entry.longevityDays)),
       createCell(formatStatus(entry)),
-      createCell(formatDate(entry.detectedAt))
+      createNoteCell(entry)
     );
     tableBody.appendChild(row);
   });
@@ -76,7 +142,7 @@ async function loadLongevity() {
     const entries = Array.isArray(payload.entries) ? payload.entries : [];
 
     renderTable(entries);
-    summary.textContent = `Showing ${entries.length} longevity entr${entries.length === 1 ? 'y' : 'ies'}. Last workflow update: ${formatDate(payload.updatedAt)}.`;
+    summary.textContent = `Showing ${entries.length} longevity entr${entries.length === 1 ? 'y' : 'ies'}. Last updated: ${formatDate(payload.updatedAt)}.`;
   } catch (error) {
     console.error('Error loading longevity data:', error);
     renderTable([]);
@@ -84,4 +150,8 @@ async function loadLongevity() {
   }
 }
 
+document.addEventListener('click', closeNoteTooltip);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeNoteTooltip();
+});
 document.addEventListener('DOMContentLoaded', loadLongevity);
