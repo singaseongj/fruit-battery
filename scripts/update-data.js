@@ -10,7 +10,9 @@ const SEOUL_UTC_OFFSET_HOURS = 9;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 1_000;
 const NO_NEWER_DATA_REASON = 'no-newer-data';
-const CONNECTION_GAP_THRESHOLD_MS = 60 * 60 * 1000;
+const CONNECTION_LOSS_IGNORE_THRESHOLD_MS = 2 * 60 * 1000;
+const CONNECTION_LOSS_DEAD_THRESHOLD_MS = 60 * 60 * 1000;
+const CONNECTION_GAP_THRESHOLD_MS = CONNECTION_LOSS_DEAD_THRESHOLD_MS;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function sleep(ms) {
@@ -192,6 +194,42 @@ async function readCurrentLongevity() {
   }
 }
 
+
+function getConnectionLossDetails(latestTimestampMs, updatedAt) {
+  const updatedAtMs = Date.parse(updatedAt);
+  if (!Number.isFinite(latestTimestampMs) || !Number.isFinite(updatedAtMs)) {
+    return { missingMs: 0, note: null, status: 'alive' };
+  }
+
+  const missingMs = Math.max(0, updatedAtMs - latestTimestampMs);
+  if (missingMs < CONNECTION_LOSS_IGNORE_THRESHOLD_MS) {
+    return { missingMs, note: null, status: 'alive' };
+  }
+
+  if (missingMs < CONNECTION_LOSS_DEAD_THRESHOLD_MS) {
+    const missingMinutes = Math.floor(missingMs / (60 * 1000));
+    return {
+      missingMs,
+      note: `connection loss for ${missingMinutes} minutes`,
+      status: 'alive'
+    };
+  }
+
+  return {
+    missingMs,
+    note: 'connection loss for more than 60 minutes',
+    status: 'dead'
+  };
+}
+
+function withOptionalNote(entry, note) {
+  if (note) return { ...entry, note };
+  if (entry.note) return entry;
+
+  const { note: _note, ...entryWithoutNote } = entry;
+  return entryWithoutNote;
+}
+
 function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
   const entries = [...currentLongevity.entries];
   const latestTimestampMs = getLatestTimestampMs(records);
@@ -205,17 +243,25 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
   const birth = toIsoString(birthMs);
   const lastEntry = entries[entries.length - 1];
 
-  if (connected) {
+  const connectionLoss = connected
+    ? { note: null, status: 'alive' }
+    : getConnectionLossDetails(latestTimestampMs, updatedAt);
+
+  if (connectionLoss.note) {
+    console.log(`[update-data] Longevity note: ${connectionLoss.note}.`);
+  }
+
+  if (connected || connectionLoss.status === 'alive') {
     const nowMs = Date.parse(updatedAt);
     const openEntry = lastEntry && lastEntry.birth === birth && !lastEntry.death;
-    const updatedEntry = {
+    const updatedEntry = withOptionalNote({
       ...(openEntry ? lastEntry : {}),
       birth,
       death: null,
       status: 'alive',
       detectedAt,
       longevityDays: calculateLongevityDays(birthMs, Number.isFinite(nowMs) ? nowMs : Date.now())
-    };
+    }, connectionLoss.note);
 
     if (openEntry) entries[entries.length - 1] = updatedEntry;
     else entries.push(updatedEntry);
@@ -225,14 +271,14 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
 
   const deathMs = Number.isFinite(latestTimestampMs) ? latestTimestampMs : Date.parse(updatedAt);
   const death = toIsoString(deathMs);
-  const deadEntry = {
+  const deadEntry = withOptionalNote({
     ...(lastEntry?.birth === birth ? lastEntry : {}),
     birth,
     death,
     status: 'dead',
     detectedAt,
     longevityDays: calculateLongevityDays(birthMs, deathMs)
-  };
+  }, connectionLoss.note);
 
   if (lastEntry?.birth === birth) entries[entries.length - 1] = deadEntry;
   else entries.push(deadEntry);
@@ -335,7 +381,10 @@ if (require.main === module) {
 module.exports = {
   MAX_RECORDS,
   NO_NEWER_DATA_REASON,
+  CONNECTION_LOSS_DEAD_THRESHOLD_MS,
+  CONNECTION_LOSS_IGNORE_THRESHOLD_MS,
   calculateLongevityDays,
+  getConnectionLossDetails,
   getCurrentConnectionStartedAt,
   getLatestTimestampMs,
   hasNewerRecords,
