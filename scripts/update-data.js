@@ -10,7 +10,7 @@ const SEOUL_UTC_OFFSET_HOURS = 9;
 const MAX_RETRIES = 4;
 const RETRY_BASE_DELAY_MS = 1_000;
 const NO_NEWER_DATA_REASON = 'no-newer-data';
-const CONNECTION_GAP_THRESHOLD_MS = 30 * 60 * 1000;
+const CONNECTION_GAP_THRESHOLD_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function sleep(ms) {
