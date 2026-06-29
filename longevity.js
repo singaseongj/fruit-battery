@@ -17,16 +17,13 @@ function createCell(text) {
   return cell;
 }
 
-function sortEntriesByBirth(entries) {
-  return [...entries].sort((entryA, entryB) => {
-    const birthA = Date.parse(entryA.birth);
-    const birthB = Date.parse(entryB.birth);
+function getEntryId(entry) {
+  const id = Number(entry?.id);
+  return Number.isFinite(id) ? id : -Infinity;
+}
 
-    if (Number.isFinite(birthA) && Number.isFinite(birthB) && birthA !== birthB) return birthA - birthB;
-    if (Number.isFinite(birthA) && !Number.isFinite(birthB)) return -1;
-    if (!Number.isFinite(birthA) && Number.isFinite(birthB)) return 1;
-    return 0;
-  });
+function sortEntriesById(entries) {
+  return [...entries].sort((entryA, entryB) => getEntryId(entryB) - getEntryId(entryA));
 }
 
 function formatStatus(entry) {
@@ -35,7 +32,7 @@ function formatStatus(entry) {
 }
 
 function getEntriesWithIds(entries) {
-  return sortEntriesByBirth(entries).map((entry, index) => ({
+  return sortEntriesById(entries).map((entry, index) => ({
     ...entry,
     id: Number.isInteger(Number(entry.id)) ? Number(entry.id) : index + 1
   }));
@@ -139,7 +136,7 @@ async function loadLongevity() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const payload = await response.json();
-    const entries = Array.isArray(payload.entries) ? payload.entries : [];
+    const entries = Array.isArray(payload) ? payload : (Array.isArray(payload.entries) ? payload.entries : []);
 
     renderTable(entries);
     summary.textContent = `Showing ${entries.length} longevity entr${entries.length === 1 ? 'y' : 'ies'}. Last updated: ${formatDate(payload.updatedAt)}.`;

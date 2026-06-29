@@ -218,12 +218,28 @@ function formatElapsedDays(startedAtMs, endedAtMs = Date.now()) {
   return Math.floor(elapsedDays).toString();
 }
 
-function getAliveLongevityEntry(entries) {
+function getLongevityEntries(payload) {
+  if (Array.isArray(payload)) return payload;
+  return Array.isArray(payload?.entries) ? payload.entries : [];
+}
+
+function getEntryId(entry) {
+  const id = Number(entry?.id);
+  return Number.isFinite(id) ? id : -Infinity;
+}
+
+function getLatestLongevityEntry(entries) {
   if (!Array.isArray(entries)) return null;
 
   return entries
-    .filter((entry) => !entry.death && (entry.status || '').toLowerCase().startsWith('alive'))
-    .sort((entryA, entryB) => Date.parse(entryB.birth) - Date.parse(entryA.birth))[0] || null;
+    .filter((entry) => Number.isFinite(getEntryId(entry)))
+    .sort((entryA, entryB) => getEntryId(entryB) - getEntryId(entryA))[0] || null;
+}
+
+
+function formatStatusLabel(entry) {
+  const status = String(entry?.status || (entry?.death ? 'dead' : 'alive')).toLowerCase();
+  return status.startsWith('alive') ? 'days alive' : 'days from latest longevity entry';
 }
 
 async function updateConnectivityLongevityFromLog(fallbackData, fallbackConnected) {
@@ -236,14 +252,14 @@ async function updateConnectivityLongevityFromLog(fallbackData, fallbackConnecte
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const payload = await response.json();
-    const aliveEntry = getAliveLongevityEntry(payload.entries);
+    const latestEntry = getLatestLongevityEntry(getLongevityEntries(payload));
 
-    if (!aliveEntry) {
+    if (!latestEntry) {
       updateConnectivityLongevity(fallbackData, fallbackConnected);
       return;
     }
 
-    const birthMs = Date.parse(aliveEntry.birth);
+    const birthMs = Date.parse(latestEntry.birth);
     if (!Number.isFinite(birthMs)) {
       updateConnectivityLongevity(fallbackData, fallbackConnected);
       return;
@@ -255,7 +271,7 @@ async function updateConnectivityLongevityFromLog(fallbackData, fallbackConnecte
     if (!valueElement || !labelElement) return;
 
     valueElement.textContent = formatElapsedDays(birthMs);
-    labelElement.textContent = `days alive since ${formatLoggedDate(new Date(birthMs))}`;
+    labelElement.textContent = `${formatStatusLabel(latestEntry)} since ${formatLoggedDate(new Date(birthMs))}`;
   } catch (error) {
     console.warn('Unable to load longevity log:', error);
     updateConnectivityLongevity(fallbackData, fallbackConnected);
