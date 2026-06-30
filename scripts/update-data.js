@@ -230,6 +230,19 @@ function withOptionalNote(entry, note) {
   return entryWithoutNote;
 }
 
+function getAccumulatedNote(existingNote, newNote) {
+  if (!newNote) return existingNote || null;
+  if (!existingNote) return newNote;
+
+  const existingNotes = existingNote
+    .split(/\s*\|\s*/)
+    .map((note) => note.trim())
+    .filter(Boolean);
+
+  if (existingNotes.includes(newNote)) return existingNote;
+  return `${existingNote} | ${newNote}`;
+}
+
 function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
   const entries = [...currentLongevity.entries];
   const latestTimestampMs = getLatestTimestampMs(records);
@@ -242,6 +255,7 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
 
   const birth = toIsoString(birthMs);
   const lastEntry = entries[entries.length - 1];
+  const activeEntry = lastEntry && !lastEntry.death ? lastEntry : null;
 
   const connectionLoss = connected
     ? { note: null, status: 'alive' }
@@ -253,17 +267,23 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
 
   if (connected || connectionLoss.status === 'alive') {
     const nowMs = Date.parse(updatedAt);
-    const openEntry = lastEntry && lastEntry.birth === birth && !lastEntry.death;
+    const entryToUpdate = activeEntry || null;
+    const entryBirth = entryToUpdate?.birth || birth;
+    const entryBirthMs = Date.parse(entryBirth);
+    const note = getAccumulatedNote(entryToUpdate?.note, connectionLoss.note);
     const updatedEntry = withOptionalNote({
-      ...(openEntry ? lastEntry : {}),
-      birth,
+      ...(entryToUpdate || {}),
+      birth: entryBirth,
       death: null,
       status: 'alive',
       detectedAt,
-      longevityDays: calculateLongevityDays(birthMs, Number.isFinite(nowMs) ? nowMs : Date.now())
-    }, connectionLoss.note);
+      longevityDays: calculateLongevityDays(
+        Number.isFinite(entryBirthMs) ? entryBirthMs : birthMs,
+        Number.isFinite(nowMs) ? nowMs : Date.now()
+      )
+    }, note);
 
-    if (openEntry) entries[entries.length - 1] = updatedEntry;
+    if (entryToUpdate) entries[entries.length - 1] = updatedEntry;
     else entries.push(updatedEntry);
 
     return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
@@ -271,16 +291,20 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
 
   const deathMs = Number.isFinite(latestTimestampMs) ? latestTimestampMs : Date.parse(updatedAt);
   const death = toIsoString(deathMs);
+  const entryToUpdate = activeEntry || (lastEntry?.birth === birth ? lastEntry : null);
+  const entryBirth = entryToUpdate?.birth || birth;
+  const entryBirthMs = Date.parse(entryBirth);
+  const note = getAccumulatedNote(entryToUpdate?.note, connectionLoss.note);
   const deadEntry = withOptionalNote({
-    ...(lastEntry?.birth === birth ? lastEntry : {}),
-    birth,
+    ...(entryToUpdate || {}),
+    birth: entryBirth,
     death,
     status: 'dead',
     detectedAt,
-    longevityDays: calculateLongevityDays(birthMs, deathMs)
-  }, connectionLoss.note);
+    longevityDays: calculateLongevityDays(Number.isFinite(entryBirthMs) ? entryBirthMs : birthMs, deathMs)
+  }, note);
 
-  if (lastEntry?.birth === birth) entries[entries.length - 1] = deadEntry;
+  if (entryToUpdate) entries[entries.length - 1] = deadEntry;
   else entries.push(deadEntry);
 
   return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
