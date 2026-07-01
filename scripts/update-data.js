@@ -166,18 +166,71 @@ function getCurrentConnectionStartedAt(records) {
   return startedAt;
 }
 
-function getEntriesWithSequentialIds(entries) {
-  return [...entries]
-    .sort((entryA, entryB) => {
-      const birthA = Date.parse(entryA.birth);
-      const birthB = Date.parse(entryB.birth);
+function sortEntriesByBirth(entries) {
+  return [...entries].sort((entryA, entryB) => {
+    const birthA = Date.parse(entryA.birth);
+    const birthB = Date.parse(entryB.birth);
 
-      if (Number.isFinite(birthA) && Number.isFinite(birthB) && birthA !== birthB) return birthA - birthB;
-      if (Number.isFinite(birthA) && !Number.isFinite(birthB)) return -1;
-      if (!Number.isFinite(birthA) && Number.isFinite(birthB)) return 1;
-      return 0;
-    })
-    .map((entry, index) => ({ ...entry, id: index + 1 }));
+    if (Number.isFinite(birthA) && Number.isFinite(birthB) && birthA !== birthB) return birthA - birthB;
+    if (Number.isFinite(birthA) && !Number.isFinite(birthB)) return -1;
+    if (!Number.isFinite(birthA) && Number.isFinite(birthB)) return 1;
+    return 0;
+  });
+}
+
+function getEntriesWithStableIds(entries) {
+  let nextId = entries.reduce((maxId, entry) => {
+    const id = Number(entry?.id);
+    return Number.isInteger(id) && id > maxId ? id : maxId;
+  }, 0) + 1;
+
+  return sortEntriesByBirth(entries).map((entry) => {
+    const id = Number(entry?.id);
+    if (Number.isInteger(id) && id > 0) return { ...entry, id };
+
+    const entryWithId = { ...entry, id: nextId };
+    nextId += 1;
+    return entryWithId;
+  });
+}
+
+function getOpenPrimaryEntry(entries) {
+  return entries.find((entry) => !entry.death && String(entry.status || 'alive').toLowerCase() !== 'dead');
+}
+
+function getNextTimelineId(entry) {
+  const parentId = Number.isInteger(Number(entry?.id)) ? Number(entry.id) : 1;
+  const timeline = Array.isArray(entry?.timeline) ? entry.timeline : [];
+  const maxChildNumber = timeline.reduce((maxChild, event) => {
+    const match = String(event?.id || '').match(new RegExp(`^${parentId}-(\\d+)$`));
+    const childNumber = match ? Number(match[1]) : 0;
+    return Number.isInteger(childNumber) && childNumber > maxChild ? childNumber : maxChild;
+  }, 0);
+
+  return `${parentId}-${maxChildNumber + 1}`;
+}
+
+function addTimelineEvent(entry, event) {
+  const timeline = Array.isArray(entry.timeline) ? entry.timeline : [];
+  const eventAt = event.at || event.death || event.detectedAt;
+  const duplicate = timeline.some((existingEvent) => (
+    existingEvent.note === event.note
+    && (existingEvent.at || existingEvent.death || existingEvent.detectedAt) === eventAt
+  ));
+
+  if (duplicate) return entry;
+
+  return {
+    ...entry,
+    timeline: [
+      ...timeline,
+      {
+        id: getNextTimelineId(entry),
+        ...event,
+        at: eventAt
+      }
+    ]
+  };
 }
 
 async function readCurrentLongevity() {
@@ -186,7 +239,7 @@ async function readCurrentLongevity() {
     const longevity = JSON.parse(longevityText);
     return {
       updatedAt: longevity?.updatedAt || null,
-      entries: Array.isArray(longevity?.entries) ? getEntriesWithSequentialIds(longevity.entries) : []
+      entries: Array.isArray(longevity?.entries) ? getEntriesWithStableIds(longevity.entries) : []
     };
   } catch (error) {
     if (error?.code === 'ENOENT') return { updatedAt: null, entries: [] };
@@ -230,18 +283,39 @@ function withOptionalNote(entry, note) {
   return entryWithoutNote;
 }
 
+function updateAliveLongevityEntries(entries, detectedAt) {
+  const nowMs = Date.parse(detectedAt);
+  const effectiveNowMs = Number.isFinite(nowMs) ? nowMs : Date.now();
+
+  return entries.map((entry) => {
+    if (entry.death || String(entry.status || '').toLowerCase() === 'dead') return entry;
+
+    const birthMs = Date.parse(entry.birth);
+    if (!Number.isFinite(birthMs)) return { ...entry, detectedAt, status: 'alive' };
+
+    return {
+      ...entry,
+      death: null,
+      status: 'alive',
+      detectedAt,
+      longevityDays: calculateLongevityDays(birthMs, effectiveNowMs)
+    };
+  });
+}
+
 function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
-  const entries = [...currentLongevity.entries];
+  let entries = updateAliveLongevityEntries([...currentLongevity.entries], updatedAt);
   const latestTimestampMs = getLatestTimestampMs(records);
   const birthMs = getCurrentConnectionStartedAt(records);
   const detectedAt = updatedAt;
 
   if (!Number.isFinite(birthMs)) {
-    return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
+    return { updatedAt, entries: getEntriesWithStableIds(entries) };
   }
 
   const birth = toIsoString(birthMs);
   const lastEntry = entries[entries.length - 1];
+  const hasOpenEntries = entries.some((entry) => !entry.death && String(entry.status || 'alive').toLowerCase() !== 'dead');
 
   const connectionLoss = connected
     ? { note: null, status: 'alive' }
@@ -251,22 +325,29 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
     console.log(`[update-data] Longevity note: ${connectionLoss.note}.`);
   }
 
-  if (connected || connectionLoss.status === 'alive') {
-    const nowMs = Date.parse(updatedAt);
-    const openEntry = lastEntry && lastEntry.birth === birth && !lastEntry.death;
-    const updatedEntry = withOptionalNote({
-      ...(openEntry ? lastEntry : {}),
-      birth,
-      death: null,
-      status: 'alive',
+  const primaryOpenEntry = getOpenPrimaryEntry(entries);
+
+  if (connectionLoss.note && primaryOpenEntry) {
+    entries = entries.map((entry) => (entry === primaryOpenEntry ? addTimelineEvent(entry, {
+      at: Number.isFinite(latestTimestampMs) ? toIsoString(latestTimestampMs) : detectedAt,
       detectedAt,
-      longevityDays: calculateLongevityDays(birthMs, Number.isFinite(nowMs) ? nowMs : Date.now())
-    }, connectionLoss.note);
+      note: connectionLoss.note
+    }) : entry));
+  }
 
-    if (openEntry) entries[entries.length - 1] = updatedEntry;
-    else entries.push(updatedEntry);
+  if (connected || connectionLoss.status === 'alive') {
+    if (!hasOpenEntries) {
+      const nowMs = Date.parse(updatedAt);
+      entries.push(withOptionalNote({
+        birth,
+        death: null,
+        status: 'alive',
+        detectedAt,
+        longevityDays: calculateLongevityDays(birthMs, Number.isFinite(nowMs) ? nowMs : Date.now())
+      }, connectionLoss.note));
+    }
 
-    return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
+    return { updatedAt, entries: getEntriesWithStableIds(entries) };
   }
 
   const deathMs = Number.isFinite(latestTimestampMs) ? latestTimestampMs : Date.parse(updatedAt);
@@ -281,9 +362,17 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
   }, connectionLoss.note);
 
   if (lastEntry?.birth === birth) entries[entries.length - 1] = deadEntry;
-  else entries.push(deadEntry);
+  else if (primaryOpenEntry) {
+    entries = entries.map((entry) => (entry === primaryOpenEntry ? withOptionalNote({
+      ...entry,
+      death,
+      status: 'dead',
+      detectedAt,
+      longevityDays: calculateLongevityDays(Date.parse(entry.birth), deathMs)
+    }, connectionLoss.note) : entry));
+  } else entries.push(deadEntry);
 
-  return { updatedAt, entries: getEntriesWithSequentialIds(entries) };
+  return { updatedAt, entries: getEntriesWithStableIds(entries) };
 }
 
 async function fetchWithRetry(url) {

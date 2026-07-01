@@ -97,6 +97,47 @@ function createNoteCell(entry) {
   return cell;
 }
 
+function getTimelineEvents(entry) {
+  return Array.isArray(entry.timeline) ? entry.timeline : [];
+}
+
+function createTimelineDetailsCell(event) {
+  const cell = document.createElement('td');
+  cell.colSpan = 5;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'timeline-details';
+
+  const timestamp = document.createElement('span');
+  timestamp.className = 'timeline-date';
+  timestamp.textContent = formatDate(event.at || event.detectedAt);
+
+  const note = document.createElement('span');
+  note.className = 'timeline-note';
+  note.textContent = event.note || 'Timeline event recorded.';
+
+  wrapper.append(timestamp, note);
+  cell.appendChild(wrapper);
+
+  return cell;
+}
+
+function renderTimelineRows(tableBody, entry) {
+  getTimelineEvents(entry).forEach((event) => {
+    const row = document.createElement('tr');
+    row.className = 'timeline-row';
+    row.append(
+      createCell(String(event.id || `${entry.id}-?`)),
+      createTimelineDetailsCell(event)
+    );
+    tableBody.appendChild(row);
+  });
+}
+
+function countTimelineEvents(entries) {
+  return entries.reduce((count, entry) => count + getTimelineEvents(entry).length, 0);
+}
+
 function renderTable(entries) {
   const tableBody = document.getElementById('longevityTableBody');
   tableBody.textContent = '';
@@ -121,6 +162,7 @@ function renderTable(entries) {
       createNoteCell(entry)
     );
     tableBody.appendChild(row);
+    renderTimelineRows(tableBody, entry);
   });
 }
 
@@ -139,7 +181,9 @@ async function loadLongevity() {
     const entries = Array.isArray(payload) ? payload : (Array.isArray(payload.entries) ? payload.entries : []);
 
     renderTable(entries);
-    summary.textContent = `Showing ${entries.length} longevity entr${entries.length === 1 ? 'y' : 'ies'}. Last updated: ${formatDate(payload.updatedAt)}.`;
+    const timelineCount = countTimelineEvents(entries);
+    const timelineText = timelineCount === 0 ? '' : ` Includes ${timelineCount} timeline event${timelineCount === 1 ? '' : 's'}.`;
+    summary.textContent = `Showing ${entries.length} longevity entr${entries.length === 1 ? 'y' : 'ies'}.${timelineText} Last updated: ${formatDate(payload.updatedAt)}.`;
   } catch (error) {
     console.error('Error loading longevity data:', error);
     renderTable([]);
