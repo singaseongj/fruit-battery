@@ -71,6 +71,42 @@ main { padding: 40px; }
 .raw-data-table tr:last-child td { border-bottom: none; }
 .raw-data-table tbody tr:nth-child(even) { background: #fafbff; }
 
+.timeline-row td {
+  background: #f8f9ff;
+  color: #555;
+  font-size: 13px;
+}
+
+.timeline-row td:first-child {
+  padding-left: 28px;
+  font-weight: 700;
+  color: #667eea;
+  position: relative;
+}
+
+.timeline-row td:first-child::before {
+  content: '↳';
+  color: #9aa6ff;
+  margin-right: 6px;
+}
+
+.timeline-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
+  white-space: normal;
+}
+
+.timeline-date {
+  color: #667085;
+  font-weight: 600;
+}
+
+.timeline-note {
+  color: #344054;
+}
+
 .note-indicator {
   width: 28px;
   height: 28px;
