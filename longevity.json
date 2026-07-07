@@ -1,12 +1,12 @@
 {
-  "updatedAt": "2026-07-07T12:40:08.246Z",
+  "updatedAt": "2026-07-07T15:37:12.884Z",
   "entries": [
     {
       "birth": "2026-06-15T06:51:24.000Z",
       "death": null,
       "status": "alive",
-      "detectedAt": "2026-07-07T12:40:08.246Z",
-      "longevityDays": 22.242,
+      "detectedAt": "2026-07-07T15:37:12.884Z",
+      "longevityDays": 22.365,
       "note": "Connection was missing for about 50 minutes and revived; likely temporary router downtime. The 2026-06-27T23:05:59.000Z birth was not treated as a real new life.",
       "id": 1,
       "timeline": [
@@ -15,6 +15,12 @@
           "at": "2026-06-30T19:25:02.000Z",
           "detectedAt": "2026-06-30T21:20:58.036Z",
           "note": "Death date: 7/1/2026, 4:25:02 AM"
+        },
+        {
+          "id": "1-2",
+          "at": "2026-07-07T11:57:52.000Z",
+          "detectedAt": "2026-07-07T15:37:12.884Z",
+          "note": "connection loss for more than 60 minutes"
         }
       ]
     }
