@@ -1,573 +1,9 @@
 {
-  "updatedAt": "2026-07-14T14:30:45.882Z",
+  "updatedAt": "2026-07-14T16:05:21.711Z",
   "connected": true,
   "hasNewData": true,
   "disconnectedReason": null,
   "records": [
-    {
-      "timestamp": "2026. 6. 29. 오후 11:22:35",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:23:35",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:24:35",
-      "voltage": 3.256,
-      "current": 17.3,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:25:35",
-      "voltage": 3.26,
-      "current": 17.3,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:26:35",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:27:35",
-      "voltage": 3.256,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:28:36",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:29:36",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:30:35",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:31:36",
-      "voltage": 3.256,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:32:36",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:33:36",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:34:36",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:35:36",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:36:36",
-      "voltage": 3.256,
-      "current": 17.7,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:37:36",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:38:36",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:39:37",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:40:36",
-      "voltage": 3.256,
-      "current": 17.8,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:41:36",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:42:39",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:43:36",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:44:36",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:45:37",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:46:36",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:47:37",
-      "voltage": 3.256,
-      "current": 17.8,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:48:37",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:49:37",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:50:37",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:51:38",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:52:37",
-      "voltage": 3.256,
-      "current": 17.7,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:53:39",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:54:37",
-      "voltage": 3.256,
-      "current": 17.3,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:55:37",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:56:37",
-      "voltage": 3.256,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:57:37",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 29. 오후 11:59:37",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:00:38",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:01:40",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:02:38",
-      "voltage": 3.26,
-      "current": 17.3,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:03:38",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:04:38",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:05:38",
-      "voltage": 3.26,
-      "current": 17.7,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:06:38",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:07:38",
-      "voltage": 3.26,
-      "current": 17.7,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:08:38",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:09:38",
-      "voltage": 3.26,
-      "current": 17.8,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:10:39",
-      "voltage": 3.256,
-      "current": 17.7,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:11:38",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:12:38",
-      "voltage": 3.26,
-      "current": 17.1,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:13:38",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:14:45",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:15:45",
-      "voltage": 3.26,
-      "current": 17.3,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:16:45",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:17:45",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:18:45",
-      "voltage": 3.26,
-      "current": 17.3,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:19:45",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:20:45",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:21:46",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:22:45",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:23:45",
-      "voltage": 3.256,
-      "current": 17.3,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:24:46",
-      "voltage": 3.256,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:25:45",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:26:45",
-      "voltage": 3.256,
-      "current": 17.3,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:27:45",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:28:46",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:29:46",
-      "voltage": 3.256,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:31:46",
-      "voltage": 3.26,
-      "current": 17.8,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:32:46",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:33:46",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:34:47",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:35:46",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:36:46",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:37:46",
-      "voltage": 3.26,
-      "current": 17.4,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:38:46",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:39:46",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:41:46",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:42:47",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:43:47",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:44:47",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:45:47",
-      "voltage": 3.256,
-      "current": 17.7,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:46:47",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:47:47",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:48:47",
-      "voltage": 3.26,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:49:47",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:50:47",
-      "voltage": 3.26,
-      "current": 17.3,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:51:47",
-      "voltage": 3.256,
-      "current": 17.7,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:52:47",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:53:47",
-      "voltage": 3.256,
-      "current": 17.4,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:54:47",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:55:47",
-      "voltage": 3.256,
-      "current": 17.5,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:56:48",
-      "voltage": 3.26,
-      "current": 17.7,
-      "power": 0.058
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:57:47",
-      "voltage": 3.256,
-      "current": 17.6,
-      "power": 0.056
-    },
-    {
-      "timestamp": "2026. 6. 30. 오전 12:58:48",
-      "voltage": 3.26,
-      "current": 17.6,
-      "power": 0.058
-    },
     {
       "timestamp": "2026. 6. 30. 오전 12:59:48",
       "voltage": 3.26,
@@ -120003,6 +119439,570 @@
       "voltage": 3.172,
       "current": 17.2,
       "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:31:24",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:32:24",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:33:25",
+      "voltage": 3.172,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:34:25",
+      "voltage": 3.172,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:35:25",
+      "voltage": 3.172,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:36:25",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:37:25",
+      "voltage": 3.168,
+      "current": 16.9,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:38:25",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:39:25",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:40:25",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:41:25",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:42:26",
+      "voltage": 3.172,
+      "current": 17,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:43:25",
+      "voltage": 3.172,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:44:26",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:45:26",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:46:26",
+      "voltage": 3.172,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:47:26",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:48:26",
+      "voltage": 3.172,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:49:26",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:50:26",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:51:26",
+      "voltage": 3.172,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:52:26",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:53:26",
+      "voltage": 3.168,
+      "current": 17.4,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:54:26",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:55:26",
+      "voltage": 3.172,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:56:26",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:57:26",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:58:26",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 14. 오후 11:59:27",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:00:27",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:01:27",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:02:27",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:03:27",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:04:27",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:05:27",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:06:30",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:07:27",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:08:28",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:09:27",
+      "voltage": 3.172,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:10:27",
+      "voltage": 3.168,
+      "current": 16.9,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:11:27",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:12:27",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:13:27",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:14:27",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:15:28",
+      "voltage": 3.168,
+      "current": 16.9,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:16:27",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:17:27",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:18:28",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:19:28",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:20:28",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:21:28",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:22:28",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:23:28",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:24:34",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:25:33",
+      "voltage": 3.164,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:26:34",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:27:34",
+      "voltage": 3.172,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:28:34",
+      "voltage": 3.168,
+      "current": 16.8,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:29:34",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:30:36",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:31:34",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:32:34",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:33:34",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:34:34",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:35:34",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:36:34",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:37:35",
+      "voltage": 3.168,
+      "current": 16.9,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:38:35",
+      "voltage": 3.164,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:39:35",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:40:35",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:41:36",
+      "voltage": 3.168,
+      "current": 16.8,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:42:35",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:43:35",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:44:35",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:45:35",
+      "voltage": 3.168,
+      "current": 17.4,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:46:36",
+      "voltage": 3.164,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:47:35",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:48:35",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:49:35",
+      "voltage": 3.164,
+      "current": 17.4,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:50:36",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:51:36",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:52:36",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:53:36",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:54:36",
+      "voltage": 3.168,
+      "current": 17.4,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:55:36",
+      "voltage": 3.168,
+      "current": 17.1,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:56:36",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:57:36",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:58:36",
+      "voltage": 3.168,
+      "current": 17.2,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 12:59:38",
+      "voltage": 3.164,
+      "current": 17.2,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 1:00:36",
+      "voltage": 3.168,
+      "current": 17.3,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 1:01:36",
+      "voltage": 3.164,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 1:02:36",
+      "voltage": 3.168,
+      "current": 17,
+      "power": 0.052
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 1:03:42",
+      "voltage": 3.164,
+      "current": 17.1,
+      "power": 0.056
+    },
+    {
+      "timestamp": "2026. 7. 15. 오전 1:04:37",
+      "voltage": 3.164,
+      "current": 17,
+      "power": 0.052
     }
   ]
 }
