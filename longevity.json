@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-09T16:46:11.602Z",
+  "updatedAt": "2026-09-09T19:32:58.368Z",
   "entries": [
     {
       "birth": "2026-06-15T06:51:24.000Z",
@@ -90,6 +90,15 @@
         }
       ],
       "note": "connection loss for more than 60 minutes"
+    },
+    {
+      "birth": "2026-09-08T01:17:33.000Z",
+      "death": "2026-09-09T02:13:37.000Z",
+      "status": "dead",
+      "detectedAt": "2026-09-09T19:32:58.368Z",
+      "longevityDays": 1.039,
+      "note": "connection loss for more than 60 minutes",
+      "id": 7
     }
   ]
 }
