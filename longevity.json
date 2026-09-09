@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-09T11:59:24.440Z",
+  "updatedAt": "2026-09-09T16:46:11.602Z",
   "entries": [
     {
       "birth": "2026-06-15T06:51:24.000Z",
@@ -76,10 +76,10 @@
     },
     {
       "birth": "2026-08-25T22:58:23.000Z",
-      "death": null,
-      "status": "alive",
-      "detectedAt": "2026-09-09T11:59:24.440Z",
-      "longevityDays": 14.542,
+      "death": "2026-09-09T02:13:37.000Z",
+      "status": "dead",
+      "detectedAt": "2026-09-09T16:46:11.602Z",
+      "longevityDays": 14.136,
       "id": 6,
       "timeline": [
         {
@@ -88,7 +88,8 @@
           "detectedAt": "2026-09-09T11:59:24.440Z",
           "note": "connection loss for more than 60 minutes"
         }
-      ]
+      ],
+      "note": "connection loss for more than 60 minutes"
     }
   ]
 }
