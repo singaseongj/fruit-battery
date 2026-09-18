@@ -2,7 +2,8 @@ name: Update battery data
 
 on:
   schedule:
-    - cron: '23/30 * * * *'
+    # GitHub schedules are best-effort. An off-minute reduces peak-hour congestion.
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -16,6 +17,9 @@ jobs:
   refresh-data:
     runs-on: ubuntu-latest
     steps:
+      - name: Log workflow start
+        run: echo "[$(date -u +%FT%TZ)] Scheduled updater workflow started (trigger=${{ github.event_name }})."
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -30,17 +34,47 @@ jobs:
       - name: Update data.json
         env:
           WEB_APP_URL: ${{ secrets.WEB_APP_URL }}
-        run: node scripts/update-data.js
-
-      - name: Commit and push if changed
         run: |
-          if git diff --quiet -- data.json longevity.json; then
-            echo "No changes to commit"
-            exit 0
-          fi
+          trap 'echo "[$(date -u +%FT%TZ)] Run failed during remote update."' ERR
+          echo "[$(date -u +%FT%TZ)] Remote fetch started."
+          node scripts/update-data.js
+          echo "[$(date -u +%FT%TZ)] Remote fetch succeeded; JSON files written."
 
+      - name: Synchronize, regenerate, commit, and push if changed
+        env:
+          WEB_APP_URL: ${{ secrets.WEB_APP_URL }}
+        run: |
+          set -euo pipefail
+          trap 'echo "[$(date -u +%FT%TZ)] Run failed during Git synchronization, commit, or push."' ERR
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json longevity.json
-          git commit -m "chore: update battery logs"
-          git push
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+              echo "[$(date -u +%FT%TZ)] main changed since checkout; synchronizing and regenerating JSON from the newest source."
+              git reset --hard origin/main
+              echo "[$(date -u +%FT%TZ)] Remote fetch started for regeneration."
+              node scripts/update-data.js
+              echo "[$(date -u +%FT%TZ)] Remote fetch succeeded; JSON files regenerated."
+            fi
+
+            if git diff --quiet -- data.json longevity.json; then
+              echo "[$(date -u +%FT%TZ)] No newer data; no commit needed."
+              exit 0
+            fi
+
+            echo "[$(date -u +%FT%TZ)] Data changed; staging JSON files."
+            git add data.json longevity.json
+            git commit -m "chore: update battery logs"
+            echo "[$(date -u +%FT%TZ)] Commit created; push attempt ${attempt}/3."
+            if git push origin HEAD:main; then
+              echo "[$(date -u +%FT%TZ)] Push succeeded."
+              exit 0
+            fi
+
+            echo "[$(date -u +%FT%TZ)] Push was not fast-forward; retrying from current origin/main."
+          done
+
+          echo "[$(date -u +%FT%TZ)] Run failed: push retries exhausted." >&2
+          exit 1

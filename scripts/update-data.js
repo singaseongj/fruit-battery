@@ -2,12 +2,12 @@ const fs = require('fs/promises');
 const path = require('path');
 
 const WEB_APP_URL = process.env.WEB_APP_URL;
-const DATA_FILE = path.join(__dirname, '..', 'data.json');
-const LONGEVITY_FILE = path.join(__dirname, '..', 'longevity.json');
-const REQUEST_TIMEOUT_MS = 60_000;
-const MAX_RECORDS = 20_000;
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, '..', 'data.json');
+const LONGEVITY_FILE = process.env.LONGEVITY_FILE || path.join(__dirname, '..', 'longevity.json');
+const REQUEST_TIMEOUT_MS = 180_000;
+const MAX_RECORDS = 5_000;
 const SEOUL_UTC_OFFSET_HOURS = 9;
-const MAX_RETRIES = 4;
+const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 1_000;
 const NO_NEWER_DATA_REASON = 'no-newer-data';
 const CONNECTION_LOSS_IGNORE_THRESHOLD_MS = 2 * 60 * 1000;
@@ -39,6 +39,28 @@ async function measureStep(label, operation) {
 
 function isRetryableStatus(status) {
   return status === 429 || status >= 500;
+}
+
+function buildRequestUrl(baseUrl, currentRecords) {
+  const url = new URL(baseUrl);
+  url.searchParams.set('limit', String(MAX_RECORDS));
+  const latestTimestampMs = getLatestTimestampMs(currentRecords);
+  if (Number.isFinite(latestTimestampMs)) {
+    url.searchParams.set('after', new Date(latestTimestampMs).toISOString());
+  }
+  return url.toString();
+}
+
+function sanitizeBodyPrefix(body, maxLength = 160) {
+  return body.slice(0, maxLength).replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function validatePayload(payload) {
+  if (!Array.isArray(payload)) throw new Error('Unexpected payload: expected an array of records');
+
+  const invalidIndex = payload.findIndex((record) => !isValidRecord(record));
+  if (invalidIndex !== -1) throw new Error(`Unexpected payload: invalid record at index ${invalidIndex}`);
+  return payload;
 }
 
 function parseSeoulTimestamp(timestamp) {
@@ -79,6 +101,13 @@ function getRecordTimestampMs(record) {
   return parsed ? parsed.getTime() : null;
 }
 
+function isValidRecord(record) {
+  return Boolean(record)
+    && typeof record === 'object'
+    && !Array.isArray(record)
+    && Number.isFinite(getRecordTimestampMs(record));
+}
+
 function sortRecordsByTimestamp(records) {
   return records
     .map((record, index) => ({ record, index, timestampMs: getRecordTimestampMs(record) }))
@@ -96,6 +125,25 @@ function sortRecordsByTimestamp(records) {
 
 function selectMostRecentRecords(records, maxRecords = MAX_RECORDS) {
   return sortRecordsByTimestamp(records).slice(-maxRecords);
+}
+
+function mergeRecentRecords(currentRecords, fetchedRecords, maxRecords = MAX_RECORDS) {
+  const recordsByIdentity = new Map();
+  for (const record of [...currentRecords, ...fetchedRecords]) {
+    const timestampMs = getRecordTimestampMs(record);
+    const identity = Number.isFinite(timestampMs) ? `timestamp:${timestampMs}` : `record:${JSON.stringify(record)}`;
+    recordsByIdentity.set(identity, record);
+  }
+  return selectMostRecentRecords([...recordsByIdentity.values()], maxRecords);
+}
+
+function migrateDataPayload(payload, maxRecords = MAX_RECORDS) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Invalid data.json payload');
+  }
+
+  const records = Array.isArray(payload.records) ? payload.records.filter(isValidRecord) : [];
+  return { ...payload, records: selectMostRecentRecords(records, maxRecords) };
 }
 
 function getLatestTimestampMs(records) {
@@ -375,17 +423,21 @@ function updateLongevityLog(currentLongevity, records, connected, updatedAt) {
   return { updatedAt, entries: getEntriesWithStableIds(entries) };
 }
 
-async function fetchWithRetry(url) {
+async function fetchWithRetry(url, options = {}) {
+  const fetchImplementation = options.fetchImplementation || fetch;
+  const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const maxRetries = options.maxRetries ?? MAX_RETRIES;
+  const retryBaseDelayMs = options.retryBaseDelayMs ?? RETRY_BASE_DELAY_MS;
   let lastError;
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     const attemptStartedAt = Date.now();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} started with ${REQUEST_TIMEOUT_MS}ms timeout.`);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    console.log(`[update-data] Fetch attempt ${attempt}/${maxRetries} started with ${timeoutMs}ms timeout.`);
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchImplementation(url, {
         signal: controller.signal,
         headers: {
           accept: 'application/json',
@@ -393,24 +445,33 @@ async function fetchWithRetry(url) {
         }
       });
 
-      console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} received HTTP ${response.status} in ${formatDurationMs(attemptStartedAt)}.`);
+      const contentType = response.headers.get('content-type') || '(missing)';
+      const body = await response.text();
+      console.log(`[update-data] Fetch attempt ${attempt}/${maxRetries} received HTTP ${response.status} in ${formatDurationMs(attemptStartedAt)}.`);
 
-      if (response.ok) return response;
+      if (!response.ok) {
+        const error = new Error(`HTTP ${response.status}`);
+        error.retryable = isRetryableStatus(response.status);
+        throw error;
+      }
 
-      const error = new Error(`HTTP ${response.status}`);
-      if (!isRetryableStatus(response.status) || attempt === MAX_RETRIES) throw error;
-
-      lastError = error;
-      const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
-      console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} retrying after ${delayMs}ms due to ${error.message}.`);
-      await sleep(delayMs);
+      try {
+        const payload = JSON.parse(body);
+        validatePayload(payload);
+        console.log(`[update-data] Remote fetch succeeded: HTTP ${response.status}, ${body.length} byte(s), ${payload.length} record(s).`);
+        return payload;
+      } catch (error) {
+        console.error(`[update-data] Invalid response: HTTP ${response.status}; Content-Type ${contentType}; body length ${body.length}; prefix=${JSON.stringify(sanitizeBodyPrefix(body))}`);
+        error.retryable = true;
+        throw error;
+      }
     } catch (error) {
-      const handledError = error?.name === 'AbortError' ? new Error(`Timeout after ${REQUEST_TIMEOUT_MS}ms`) : error;
-      console.error(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} failed after ${formatDurationMs(attemptStartedAt)}: ${handledError.message}`);
-      if (attempt === MAX_RETRIES) throw handledError;
+      const handledError = error?.name === 'AbortError' ? new Error(`Timeout after ${timeoutMs}ms`) : error;
+      console.error(`[update-data] Fetch attempt ${attempt}/${maxRetries} failed after ${formatDurationMs(attemptStartedAt)}: ${handledError.message}`);
+      if (handledError.retryable === false || attempt === maxRetries) throw handledError;
       lastError = handledError;
-      const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
-      console.log(`[update-data] Fetch attempt ${attempt}/${MAX_RETRIES} retrying after ${delayMs}ms.`);
+      const delayMs = retryBaseDelayMs * 2 ** (attempt - 1);
+      console.log(`[update-data] Fetch attempt ${attempt}/${maxRetries} retrying after ${delayMs}ms.`);
       await sleep(delayMs);
     } finally {
       clearTimeout(timeout);
@@ -427,12 +488,15 @@ async function main() {
 
   const currentData = await measureStep('reading current data.json', readCurrentData);
   const currentLongevity = await measureStep('reading current longevity.json', readCurrentLongevity);
-  const response = await measureStep('fetching remote data', () => fetchWithRetry(WEB_APP_URL));
-  const payload = await measureStep('parsing remote JSON response', () => response.json());
+  const requestUrl = buildRequestUrl(WEB_APP_URL, currentData.records);
+  console.log(`[update-data] Remote fetch started at ${new Date().toISOString()} (URL hidden; requesting limit=${MAX_RECORDS}${currentData.records.length ? ' with incremental cursor' : ''}).`);
+  const payload = await measureStep('fetching, parsing, and validating remote data', () => fetchWithRetry(requestUrl));
   const { fetchedRecords, hasNewData, records, wrapped } = await measureStep('preparing data.json payload', async () => {
-    const fetchedRecords = Array.isArray(payload) ? selectMostRecentRecords(payload) : [];
+    const fetchedRecords = selectMostRecentRecords(payload);
     const hasNewData = hasNewerRecords(fetchedRecords, currentData.records);
-    const records = hasNewData ? fetchedRecords : currentData.records;
+    const records = hasNewData
+      ? mergeRecentRecords(currentData.records, fetchedRecords)
+      : selectMostRecentRecords(currentData.records);
     const wrapped = {
       updatedAt: new Date().toISOString(),
       connected: hasNewData,
@@ -451,11 +515,13 @@ async function main() {
   );
   await measureStep('writing longevity.json', () => fs.writeFile(LONGEVITY_FILE, JSON.stringify(longevity, null, 2) + '\n', 'utf8'));
 
-  const fetchedCount = Array.isArray(payload) ? payload.length : 0;
+  const fetchedCount = payload.length;
   console.log(`[update-data] Prepared ${fetchedRecords.length} selected record(s); writing ${records.length} record(s).`);
   if (hasNewData) {
+    console.log(`[update-data] Data changed at ${wrapped.updatedAt}.`);
     console.log(`Updated data.json at ${wrapped.updatedAt} with ${wrapped.records.length} of ${fetchedCount} records.`);
   } else {
+    console.log(`[update-data] No newer data at ${wrapped.updatedAt}.`);
     console.log(`No newer data fetched at ${wrapped.updatedAt}; kept ${wrapped.records.length} current record(s) and marked disconnected.`);
   }
 }
@@ -468,16 +534,24 @@ if (require.main === module) {
 }
 
 module.exports = {
+  REQUEST_TIMEOUT_MS,
+  MAX_RETRIES,
   MAX_RECORDS,
   NO_NEWER_DATA_REASON,
   CONNECTION_LOSS_DEAD_THRESHOLD_MS,
   CONNECTION_LOSS_IGNORE_THRESHOLD_MS,
+  buildRequestUrl,
   calculateLongevityDays,
+  fetchWithRetry,
   getConnectionLossDetails,
   getCurrentConnectionStartedAt,
   getLatestTimestampMs,
   hasNewerRecords,
+  isValidRecord,
+  mergeRecentRecords,
+  migrateDataPayload,
   parseSeoulTimestamp,
   selectMostRecentRecords,
+  validatePayload,
   updateLongevityLog
 };
