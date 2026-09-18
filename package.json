@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "update:data": "node scripts/update-data.js"
+    "update:data": "node scripts/update-data.js",
+    "migrate:data": "node scripts/migrate-data.js",
+    "test": "node --test"
   },
   "dependencies": {
     "express": "^4.21.2"
