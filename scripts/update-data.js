@@ -41,16 +41,6 @@ function isRetryableStatus(status) {
   return status === 429 || status >= 500;
 }
 
-function buildRequestUrl(baseUrl, currentRecords) {
-  const url = new URL(baseUrl);
-  url.searchParams.set('limit', String(MAX_RECORDS));
-  const latestTimestampMs = getLatestTimestampMs(currentRecords);
-  if (Number.isFinite(latestTimestampMs)) {
-    url.searchParams.set('after', new Date(latestTimestampMs).toISOString());
-  }
-  return url.toString();
-}
-
 function sanitizeBodyPrefix(body, maxLength = 160) {
   return body.slice(0, maxLength).replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -488,8 +478,8 @@ async function main() {
 
   const currentData = await measureStep('reading current data.json', readCurrentData);
   const currentLongevity = await measureStep('reading current longevity.json', readCurrentLongevity);
-  const requestUrl = buildRequestUrl(WEB_APP_URL, currentData.records);
-  console.log(`[update-data] Remote fetch started at ${new Date().toISOString()} (URL hidden; requesting limit=${MAX_RECORDS}${currentData.records.length ? ' with incremental cursor' : ''}).`);
+  const requestUrl = WEB_APP_URL;
+  console.log(`[update-data] Remote fetch started at ${new Date().toISOString()} (URL hidden; using configured WEB_APP_URL).`);
   const payload = await measureStep('fetching, parsing, and validating remote data', () => fetchWithRetry(requestUrl));
   const { fetchedRecords, hasNewData, records, wrapped } = await measureStep('preparing data.json payload', async () => {
     const fetchedRecords = selectMostRecentRecords(payload);
@@ -540,7 +530,6 @@ module.exports = {
   NO_NEWER_DATA_REASON,
   CONNECTION_LOSS_DEAD_THRESHOLD_MS,
   CONNECTION_LOSS_IGNORE_THRESHOLD_MS,
-  buildRequestUrl,
   calculateLongevityDays,
   fetchWithRetry,
   getConnectionLossDetails,

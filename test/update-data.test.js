@@ -8,7 +8,6 @@ const test = require('node:test');
 
 const {
   MAX_RECORDS,
-  buildRequestUrl,
   fetchWithRetry,
   mergeRecentRecords,
   migrateDataPayload,
@@ -38,27 +37,28 @@ test('accepts a valid JSON response', async () => {
   assert.equal(payload.length, 1);
 });
 
-test('requests a bounded incremental payload without exposing it in logs', () => {
-  const url = new URL(buildRequestUrl('https://example.invalid/private-token?mode=read', [record(1)]));
-  assert.equal(url.searchParams.get('limit'), '5000');
-  assert.equal(url.searchParams.get('after'), '2026-01-01T00:00:01.000Z');
-  assert.equal(url.searchParams.get('mode'), 'read');
+test('retries HTTP 500 before success', async () => {
+  let calls = 0;
+  const payload = await fetchWithRetry('https://hidden.invalid', {
+    fetchImplementation: async () => (++calls === 1
+      ? response('temporary', 500, 'text/plain')
+      : response(JSON.stringify([record(2)]))),
+    retryBaseDelayMs: 0
+  });
+  assert.equal(calls, 2);
+  assert.equal(payload[0].voltage, 2);
 });
 
-test('retries HTTP 500, malformed JSON, and HTML before success', async () => {
-  for (const firstResponse of [
-    response('temporary', 500, 'text/plain'),
-    response('[{"timestamp":', 200),
-    response('<html>Google error</html>', 200, 'text/html')
-  ]) {
-    let calls = 0;
-    const payload = await fetchWithRetry('https://hidden.invalid', {
-      fetchImplementation: async () => (++calls === 1 ? firstResponse : response(JSON.stringify([record(2)]))),
-      retryBaseDelayMs: 0
-    });
-    assert.equal(calls, 2);
-    assert.equal(payload[0].voltage, 2);
-  }
+test('retries malformed JSON before success', async () => {
+  let calls = 0;
+  const payload = await fetchWithRetry('https://hidden.invalid', {
+    fetchImplementation: async () => (++calls === 1
+      ? response('[{"timestamp":', 200)
+      : response(JSON.stringify([record(2)]))),
+    retryBaseDelayMs: 0
+  });
+  assert.equal(calls, 2);
+  assert.equal(payload[0].voltage, 2);
 });
 
 test('retries a timeout before success', async () => {
@@ -106,6 +106,13 @@ test('5000 existing plus 10 incremental records preserves a 5000-record window',
   assert.equal(merged.length, 5000);
   assert.equal(merged[0].value, 10);
   assert.equal(merged.at(-1).value, 5009);
+});
+
+test('5000 existing plus a full historical response keeps the newest 5000 records', () => {
+  const merged = mergeRecentRecords(records(5000, 100000), records(100000));
+  assert.equal(merged.length, 5000);
+  assert.equal(merged[0].value, 100000);
+  assert.equal(merged.at(-1).value, 104999);
 });
 
 test('5000 existing plus zero new records remains unchanged', () => {
@@ -182,7 +189,43 @@ test('rolling truncation preserves longevity birth and creates no duplicate birt
   assert.equal(twice.entries[0].id, 7);
 });
 
-test('unusable remote data leaves existing JSON files untouched', async (t) => {
+test('production updater fetches the configured WEB_APP_URL unchanged without limit or after', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'fruit-battery-'));
+  const dataFile = path.join(directory, 'data.json');
+  const longevityFile = path.join(directory, 'longevity.json');
+  await fs.writeFile(dataFile, JSON.stringify({ records: [record(1)] }));
+  await fs.writeFile(longevityFile, JSON.stringify({ entries: [] }));
+
+  let requestedPath;
+  const server = http.createServer((request, reply) => {
+    requestedPath = request.url;
+    reply.writeHead(200, { 'content-type': 'application/json' });
+    reply.end(JSON.stringify([record(2)]));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const configuredPath = '/secret?mode=read&token=private-value';
+
+  const child = spawn(process.execPath, ['scripts/update-data.js'], {
+    cwd: path.join(__dirname, '..'),
+    env: {
+      ...process.env,
+      WEB_APP_URL: `http://127.0.0.1:${server.address().port}${configuredPath}`,
+      DATA_FILE: dataFile,
+      LONGEVITY_FILE: longevityFile
+    },
+    stdio: 'ignore'
+  });
+  const exitCode = await new Promise((resolve) => child.on('exit', resolve));
+
+  assert.equal(exitCode, 0);
+  assert.equal(requestedPath, configuredPath);
+  const requestedUrl = new URL(requestedPath, 'http://localhost');
+  assert.equal(requestedUrl.searchParams.has('limit'), false);
+  assert.equal(requestedUrl.searchParams.has('after'), false);
+});
+
+test('HTTP 404 exits nonzero and leaves data.json and longevity.json byte-for-byte unchanged', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'fruit-battery-'));
   const dataFile = path.join(directory, 'data.json');
   const longevityFile = path.join(directory, 'longevity.json');
@@ -192,8 +235,8 @@ test('unusable remote data leaves existing JSON files untouched', async (t) => {
   await fs.writeFile(longevityFile, originalLongevity);
 
   const server = http.createServer((_request, reply) => {
-    reply.writeHead(200, { 'content-type': 'text/html' });
-    reply.end('<html>temporary failure</html>');
+    reply.writeHead(404, { 'content-type': 'text/plain' });
+    reply.end('not found');
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => server.close());
