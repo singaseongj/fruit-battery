@@ -38,7 +38,9 @@ async function measureStep(label, operation) {
 }
 
 function isRetryableStatus(status) {
-  return status === 429 || status >= 500;
+  // The configured Apps Script endpoint can intermittently return 404.
+  // Retry within the existing bound; a persistent missing deployment still fails.
+  return status === 404 || status === 429 || status >= 500;
 }
 
 function sanitizeBodyPrefix(body, maxLength = 160) {

@@ -49,6 +49,23 @@ test('retries HTTP 500 before success', async () => {
   assert.equal(payload[0].voltage, 2);
 });
 
+test('recovers from intermittent HTTP 404 responses within the retry limit', async () => {
+  let calls = 0;
+  const url = 'https://hidden.invalid/exec?mode=read';
+  const payload = await fetchWithRetry(url, {
+    fetchImplementation: async (requestedUrl) => {
+      assert.equal(requestedUrl, url);
+      calls += 1;
+      return calls < 3
+        ? response('not found', 404, 'text/html')
+        : response(JSON.stringify([record(2)]));
+    },
+    retryBaseDelayMs: 0
+  });
+  assert.equal(calls, 3);
+  assert.deepEqual(payload, [record(2)]);
+});
+
 test('retries malformed JSON before success', async () => {
   let calls = 0;
   const payload = await fetchWithRetry('https://hidden.invalid', {
@@ -225,7 +242,7 @@ test('production updater fetches the configured WEB_APP_URL unchanged without li
   assert.equal(requestedUrl.searchParams.has('after'), false);
 });
 
-test('HTTP 404 exits nonzero and leaves data.json and longevity.json byte-for-byte unchanged', async (t) => {
+test('persistent HTTP 404 exhausts three attempts, exits nonzero, and leaves both files unchanged', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'fruit-battery-'));
   const dataFile = path.join(directory, 'data.json');
   const longevityFile = path.join(directory, 'longevity.json');
@@ -234,7 +251,9 @@ test('HTTP 404 exits nonzero and leaves data.json and longevity.json byte-for-by
   await fs.writeFile(dataFile, originalData);
   await fs.writeFile(longevityFile, originalLongevity);
 
+  let calls = 0;
   const server = http.createServer((_request, reply) => {
+    calls += 1;
     reply.writeHead(404, { 'content-type': 'text/plain' });
     reply.end('not found');
   });
@@ -253,6 +272,7 @@ test('HTTP 404 exits nonzero and leaves data.json and longevity.json byte-for-by
   });
   const exitCode = await new Promise((resolve) => child.on('exit', resolve));
   assert.equal(exitCode, 1);
+  assert.equal(calls, 3);
   assert.equal(await fs.readFile(dataFile, 'utf8'), originalData);
   assert.equal(await fs.readFile(longevityFile, 'utf8'), originalLongevity);
 });
