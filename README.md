@@ -25,6 +25,12 @@ uses an off-minute hourly schedule to reduce peak-time contention, and its times
 phase logs distinguish a scheduler/queue delay from fetch, validation, commit, or push
 failures and from a successful run with no newer sensor data.
 
+The updater retries intermittent HTTP 404 responses from the configured Apps Script
+endpoint using the same bounded backoff as HTTP 429 and server errors: up to three
+attempts, with 1- and 2-second delays. A persistent 404 still fails the workflow and
+leaves both JSON files unchanged; check the deployment URL and access settings if
+all attempts fail. HTTP authorization errors are not retried.
+
 Committing frequently changing telemetry to Git is retained for the current static-site
 architecture, but it causes repository history to grow even with the smaller rolling
 window. If data volume continues to increase, move raw telemetry to object storage or a
